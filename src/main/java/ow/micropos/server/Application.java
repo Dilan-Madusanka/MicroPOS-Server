@@ -38,9 +38,9 @@ public class Application {
     @Bean(name = "printerDispatcher")
     PrinterDispatcher printerDispatcher() throws NoSuchPortException, PortInUseException,
             UnsupportedCommOperationException, IOException {
-        //SerialPort sp = ESCPos.connectSerialPort("COM1");
-        //PrinterDispatcher pd = new PrinterDispatcherImpl(sp.getOutputStream());
-        PrinterDispatcher pd = new PrinterDispatcherEmpty();
+        SerialPort sp = ESCPos.connectSerialPort("COM1");
+        PrinterDispatcher pd = new PrinterDispatcherImpl(sp.getOutputStream());
+        //PrinterDispatcher pd = new PrinterDispatcherEmpty();
         new Thread(pd).start();
         return pd;
     }

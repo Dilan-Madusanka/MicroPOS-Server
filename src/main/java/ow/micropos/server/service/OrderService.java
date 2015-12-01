@@ -117,14 +117,16 @@ public class OrderService {
                     validateChargeEntry(employee, prevCE, currCE);
                 });
 
+        // Persistence
+        long id = saveSalesOrder(currOrder);
+
         // Processing
         processSalesOrder(currOrder);
 
         currOrder.getProductEntries()
                 .forEach(this::processProductEntry);
 
-        // Persistence
-        return saveSalesOrder(currOrder);
+        return id;
 
     }
 
