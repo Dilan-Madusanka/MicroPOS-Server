@@ -173,6 +173,8 @@ public class OrderService {
         if (prevPE == null) {
             if (currPE.hasStatus(ProductEntryStatus.REQUEST_SENT))
                 authService.authorize(employee, Permission.CREATE_PRODUCT_ENTRY);
+            else if (currPE.hasStatus(ProductEntryStatus.REQUEST_HOLD))
+                authService.authorize(employee, Permission.HOLD_PRODUCT_ENTRY);
             else
                 throw new MicroPosException("Invalid Product Status : NULL -> " + currPE.getStatus());
 
