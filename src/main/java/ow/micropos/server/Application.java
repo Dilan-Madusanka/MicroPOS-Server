@@ -24,11 +24,6 @@ import java.io.IOException;
 // We must manually declare each sub-annotation to avoid
 // autowiring problems.
 
-// Interface repositories must be excluded from
-// @EnableAutoConfiguration. I think they are being automatically
-// imported as repositories, but fails because both are repositories
-// of unmanaged beans: Identifiable and Archivable.
-
 @Configuration
 @EnableAutoConfiguration
 @EnableJpaRepositories
