@@ -1,2 +1,2 @@
 # MicroPOS-Server
-Point-of-Sale System Server (Spring Boot)
+Point-of-Sale System Server in Spring Boot
