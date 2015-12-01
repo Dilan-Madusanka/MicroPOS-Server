@@ -1,0 +1,50 @@
+[
+  {
+    "name": "10% Off",
+    "tag": "-10%",
+    "amount": "-0.10",
+    "type": "PERCENTAGE"
+  },
+  {
+    "name": "20% Off",
+    "tag": "-20%",
+    "amount": "-0.20",
+    "type": "PERCENTAGE"
+  },
+  {
+    "name": "30% Off",
+    "tag": "-30%",
+    "amount": "-0.30",
+    "type": "PERCENTAGE"
+  },
+  {
+    "name": "40% Off",
+    "tag": "-40%",
+    "amount": "-0.40",
+    "type": "PERCENTAGE"
+  },
+  {
+    "name": "50% Off",
+    "tag": "-50%",
+    "amount": "-0.50",
+    "type": "PERCENTAGE"
+  },
+  {
+    "name": "$50 Off",
+    "tag": "-$50",
+    "amount": "-50",
+    "type": "FIXED_AMOUNT"
+  },
+  {
+    "name": "$100 Off",
+    "tag": "-$50",
+    "amount": "-50",
+    "type": "FIXED_AMOUNT"
+  },
+  {
+    "name": "18% Gratuity",
+    "tag": "SC",
+    "amount": "-0.18",
+    "type": "PERCENTAGE"
+  }
+]

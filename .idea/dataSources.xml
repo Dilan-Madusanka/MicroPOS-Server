@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" hash="1110076521">
+    <data-source source="LOCAL" name="MicroPos" uuid="228f489c-4fc0-4c5c-8b86-1b4f59e0f56e">
+      <driver-ref>h2.embedded</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.h2.Driver</jdbc-driver>
+      <jdbc-url>jdbc:h2:file:$USER_HOME$/micropos</jdbc-url>
+      <libraries />
+    </data-source>
+  </component>
+</project>

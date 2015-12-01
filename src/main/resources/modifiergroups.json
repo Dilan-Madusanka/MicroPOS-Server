@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Vegetables",
+    "tag": "V"
+  },
+  {
+    "name": "Sauce",
+    "tag": "S"
+  },
+  {
+    "name": "Meat",
+    "tag": "M"
+  },
+  {
+    "name": "Cook",
+    "tag": "C"
+  },
+  {
+    "name": "Drink",
+    "tag": "D"
+  },
+  {
+    "name": "Rice",
+    "tag": "R"
+  }
+]
