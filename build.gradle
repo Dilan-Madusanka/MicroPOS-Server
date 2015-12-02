@@ -1,0 +1,57 @@
+// Build Dependencies
+buildscript {
+
+    ext {
+        springBootVersion = '1.2.4.RELEASE'
+    }
+
+    repositories {
+        mavenCentral()
+        maven { url "http://repo.spring.io/milestone" }
+    }
+
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+
+}
+
+// Task Plugins
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'spring-boot'
+
+// Project Packaging
+jar {
+    baseName = 'micropos-server'
+    version = '0.0.1'
+}
+
+// Project Repositories
+repositories {
+    mavenCentral()
+    maven { url "http://repo.spring.io/milestone" }
+}
+
+// Project Dependencies
+dependencies {
+    compile files('libs/rxtx-2.1-7/RXTXcomm.jar')
+    compile 'org.springframework.boot:spring-boot-starter-web'
+    compile 'org.springframework.boot:spring-boot-starter-data-jpa'
+    compile 'org.springframework.boot:spring-boot-starter-data-rest'
+
+    compile 'commons-io:commons-io:2.4'
+    compile 'commons-codec:commons-codec:1.10'
+
+    compile 'com.google.code.gson:gson:2.3.1'
+    compile 'org.projectlombok:lombok:1.16.4'
+    compile 'com.h2database:h2:1.4.187'
+
+    //testCompile 'org.springframework.boot:spring-boot-starter-test'
+    //testCompile 'com.jayway.restassured:rest-assured:2.4.1'
+}
+
+// Gradle Wrapper
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.3'
+}
