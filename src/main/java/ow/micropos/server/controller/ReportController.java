@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import ow.micropos.server.model.Permission;
+import ow.micropos.server.model.reports.CurrentSalesReport;
 import ow.micropos.server.model.reports.SimpleReport;
 import ow.micropos.server.model.View;
 import ow.micropos.server.service.AuthService;
@@ -40,4 +41,16 @@ public class ReportController {
         return rService.generateSimpleReport(start, end);
 
     }
+
+    @RequestMapping(value = "/current", method = RequestMethod.GET)
+    public CurrentSalesReport generateCurrentSalesReport(
+            HttpServletRequest request
+    ) {
+
+        authService.authorize(request, Permission.CURRENT_REPORT);
+
+        return rService.generateCurrentSalesReport();
+
+    }
+
 }

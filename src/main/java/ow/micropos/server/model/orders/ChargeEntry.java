@@ -1,12 +1,13 @@
 package ow.micropos.server.model.orders;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import lombok.Data;
 import ow.micropos.server.model.View;
 import ow.micropos.server.model.charge.Charge;
 import ow.micropos.server.model.enums.ChargeEntryStatus;
+import ow.micropos.server.model.enums.ChargeType;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -74,6 +75,10 @@ public class ChargeEntry {
 
     public boolean hasStatus(ChargeEntryStatus status) {
         return getStatus() == status;
+    }
+
+    public boolean hasType(ChargeType type) {
+        return getCharge().hasType(type);
     }
 
 }

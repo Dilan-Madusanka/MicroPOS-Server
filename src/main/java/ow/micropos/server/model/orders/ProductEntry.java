@@ -101,4 +101,5 @@ public class ProductEntry {
     public boolean hasStatus(ProductEntryStatus status) {
         return getStatus() == status;
     }
+
 }

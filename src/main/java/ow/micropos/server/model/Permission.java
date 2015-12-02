@@ -45,6 +45,7 @@ public enum Permission {
     CLOSE_UNPAID_ORDERS,
     MIGRATION,
     GET_RECORDS,
-    SIMPLE_REPORT
+    SIMPLE_REPORT,
+    CURRENT_REPORT
 
 }

@@ -1,12 +1,9 @@
 package ow.micropos.server;
 
-import email.com.gmail.ttsai0509.escpos.ESCPos;
 import email.com.gmail.ttsai0509.escpos.PrinterDispatcher;
 import email.com.gmail.ttsai0509.escpos.PrinterDispatcherEmpty;
-import email.com.gmail.ttsai0509.escpos.PrinterDispatcherImpl;
 import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
-import gnu.io.SerialPort;
 import gnu.io.UnsupportedCommOperationException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -33,9 +30,9 @@ public class Application {
     @Bean(name = "printerDispatcher")
     PrinterDispatcher printerDispatcher() throws NoSuchPortException, PortInUseException,
             UnsupportedCommOperationException, IOException {
-        SerialPort sp = ESCPos.connectSerialPort("COM1");
-        PrinterDispatcher pd = new PrinterDispatcherImpl(sp.getOutputStream());
-        //PrinterDispatcher pd = new PrinterDispatcherEmpty();
+        //SerialPort sp = ESCPos.connectSerialPort("COM1");
+        //PrinterDispatcher pd = new PrinterDispatcherImpl(sp.getOutputStream());
+        PrinterDispatcher pd = new PrinterDispatcherEmpty();
         new Thread(pd).start();
         return pd;
     }
