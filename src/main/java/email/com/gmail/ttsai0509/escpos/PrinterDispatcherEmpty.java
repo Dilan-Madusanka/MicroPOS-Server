@@ -1,9 +1,22 @@
 package email.com.gmail.ttsai0509.escpos;
 
+import java.util.Arrays;
+
 public class PrinterDispatcherEmpty implements PrinterDispatcher {
+
     @Override
-    public boolean print(byte[] job) {
-        System.out.println("Job Request : " + job.toString());
+    public void registerPrinter(Printer printer) {
+        System.out.println("Registered " + printer.getId());
+    }
+
+    @Override
+    public void unregisterPrinter(Printer printer) {
+        System.out.println("Unregistered " + printer.getId());
+    }
+
+    @Override
+    public boolean requestPrint(String id, byte[] job) {
+        System.out.println("Printer " + id + " : " + Arrays.toString(job));
         return false;
     }
 

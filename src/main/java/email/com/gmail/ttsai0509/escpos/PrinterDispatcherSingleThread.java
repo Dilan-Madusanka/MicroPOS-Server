@@ -5,12 +5,13 @@ import gnu.io.PortInUseException;
 import gnu.io.UnsupportedCommOperationException;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PrinterDispatcherImpl implements PrinterDispatcher {
+public class PrinterDispatcherSingleThread implements PrinterDispatcher {
 
     private AtomicBoolean closeRequest;
     private AtomicInteger jobRejected, jobTakeInterrupt,
@@ -19,10 +20,10 @@ public class PrinterDispatcherImpl implements PrinterDispatcher {
 
     private Thread currentThread;
 
-    private final LinkedBlockingQueue<byte[]> printJobs;
-    private final OutputStream printer;
+    private final ConcurrentHashMap<String, Printer> printerMap;
+    private final LinkedBlockingQueue<PrintJob> printJobs;
 
-    public PrinterDispatcherImpl(OutputStream printer) throws
+    public PrinterDispatcherSingleThread() throws
             NoSuchPortException,
             PortInUseException,
             UnsupportedCommOperationException {
@@ -37,12 +38,22 @@ public class PrinterDispatcherImpl implements PrinterDispatcher {
         jobRejected = new AtomicInteger(0);
         jobTakeInterrupt = new AtomicInteger(0);
 
+        printerMap = new ConcurrentHashMap<>();
         printJobs = new LinkedBlockingQueue<>();
-        this.printer = printer;
     }
 
     @Override
-    public boolean print(byte[] job) {
+    public void registerPrinter(Printer printer) {
+        printerMap.put(printer.getId(), printer);
+    }
+
+    @Override
+    public void unregisterPrinter(Printer printer) {
+        printerMap.remove(printer.getId());
+    }
+
+    @Override
+    public boolean requestPrint(String id, byte[] job) {
 
         if (closeRequest.get()) {
 
@@ -53,8 +64,13 @@ public class PrinterDispatcherImpl implements PrinterDispatcher {
 
             jobRequest.incrementAndGet();
 
+            if (!printerMap.containsKey(id)) {
+                jobRequestFail.incrementAndGet();
+                return false;
+            }
+
             try {
-                printJobs.put(job);
+                printJobs.put(new PrintJob(id, job));
                 jobRequestPass.incrementAndGet();
                 return true;
 
@@ -80,15 +96,26 @@ public class PrinterDispatcherImpl implements PrinterDispatcher {
         while (!closeRequest.get() || !printJobs.isEmpty()) {
 
             try {
-                byte[] job = printJobs.take();
+                PrintJob job = printJobs.take();
 
                 jobProcess.incrementAndGet();
 
-                try {
-                    printer.write(job);
-                    jobProcessPass.incrementAndGet();
-                } catch (IOException e) {
+                if (!printerMap.containsKey(job.getId())) {
+
                     jobProcessFail.incrementAndGet();
+
+                } else {
+
+                    try {
+                        printerMap
+                                .get(job.getId())
+                                .getOutput()
+                                .write(job.getJob());
+                        jobProcessPass.incrementAndGet();
+                    } catch (IOException e) {
+                        jobProcessFail.incrementAndGet();
+                    }
+
                 }
 
             } catch (InterruptedException e) {
@@ -110,6 +137,24 @@ public class PrinterDispatcherImpl implements PrinterDispatcher {
                 "\nJobs Rejected  : " + jobRejected.get() +
                 "\nTake Interrupt : " + jobTakeInterrupt.get() +
                 "\n=====================");
+    }
+
+    private static class PrintJob {
+        private final String id;
+        private final byte[] job;
+
+        public PrintJob(String id, byte[] job) {
+            this.id = id;
+            this.job = job;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public byte[] getJob() {
+            return job;
+        }
     }
 
 }

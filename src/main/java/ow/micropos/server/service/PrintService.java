@@ -22,7 +22,9 @@ import java.util.stream.Collectors;
 @Service
 public class PrintService {
 
-    @Autowired ObjectViewMapper mapper;
+    @Autowired
+    ObjectViewMapper mapper;
+
     @Autowired
     @Qualifier(value = "printerDispatcher")
     PrinterDispatcher pd;
@@ -78,7 +80,7 @@ public class PrintService {
                     .print(7)
                     .print(ESCPos.FULL_CUT);
 
-            pd.print(raw.toByteArray());
+            pd.requestPrint("Sushi", raw.toByteArray());
             return true;
 
         } catch (IOException e) {
