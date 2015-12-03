@@ -2,12 +2,14 @@ package ow.micropos.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import email.com.gmail.ttsai0509.escpos.Printer;
-import email.com.gmail.ttsai0509.escpos.PrinterDispatcher;
-import email.com.gmail.ttsai0509.escpos.PrinterDispatcherEmpty;
-import gnu.io.NoSuchPortException;
-import gnu.io.PortInUseException;
-import gnu.io.UnsupportedCommOperationException;
+import email.com.gmail.ttsai0509.escpos.ESCPos;
+import email.com.gmail.ttsai0509.print.Printer;
+import email.com.gmail.ttsai0509.print.PrinterDispatcher;
+import email.com.gmail.ttsai0509.print.PrinterDispatcherAsync;
+import email.com.gmail.ttsai0509.utils.LoggerOutputStream;
+import gnu.io.SerialPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -42,7 +44,10 @@ import ow.micropos.server.repository.seating.SeatRepository;
 import ow.micropos.server.repository.seating.SectionRepository;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 // @SpringBootApplication
@@ -56,31 +61,69 @@ import java.util.List;
 @ComponentScan
 public class Application {
 
-    public static void main(String[] args) {
-        ConfigurableApplicationContext context = SpringApplication.run(Application.class);
-        context.getBean(Application.class).reset();
-    }
-
-    @Autowired
-    ApplicationContext context;
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
 
     @Value("${micropos.printers}")
     @Bean(name = "printerDispatcher")
-    PrinterDispatcher printerDispatcher(String microposPrinters) throws
-            NoSuchPortException, PortInUseException,
-            UnsupportedCommOperationException, IOException {
+    PrinterDispatcher printerDispatcher(String microposPrinters) {
 
-        PrinterDispatcher pd = new PrinterDispatcherEmpty();
+        PrinterDispatcher pd = new PrinterDispatcherAsync();
 
-        String[] printerProperties = microposPrinters.split(":");
+        String[] printerConfigs = microposPrinters.split(":");
 
-        for (String property : printerProperties)
-            pd.registerPrinter(Printer.cliPrinter(property));
+        Map<String, OutputStream> deviceMap = new HashMap<>();
+        deviceMap.put("CLI", System.out);
+        deviceMap.put("LOG", new LoggerOutputStream(PrinterDispatcher.class, LoggerOutputStream.Level.INFO));
+
+        for (String printerConfig : printerConfigs) {
+
+            String[] config = printerConfig.split(",");
+
+            if (config.length < 2) {
+                log.warn("Invalid printer configuration : " + printerConfig);
+                continue;
+            }
+
+            String printerName = config[0];
+            String printerDevice = config[1];
+
+            if (!deviceMap.containsKey(printerDevice)) {
+                try {
+                    SerialPort sp = ESCPos.connectSerialPort(printerDevice);
+                    deviceMap.put(printerDevice, sp.getOutputStream());
+                } catch (Error e) {
+                    log.error("Could not load serial drivers.");
+                    deviceMap.put(printerDevice, System.out);
+                } catch (Exception e) {
+                    log.warn("Unable to open serial port " + printerDevice);
+                    deviceMap.put(printerDevice, System.out);
+                }
+            }
+
+            pd.registerPrinter(Printer.streamPrinter(printerName, deviceMap.get(printerDevice)));
+
+        }
 
         new Thread(pd).start();
 
         return pd;
     }
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(Application.class);
+        context.getBean(Application.class).reset();
+
+    }
+
+    /******************************************************************
+     *                                                                *
+     * For use with create-drop auto-ddl. Automatically load defaults *
+     * for testing.                                                   *
+     *                                                                *
+     ******************************************************************/
+
+    @Autowired
+    ApplicationContext context;
 
     private void reset() {
         reset(context, ChargeRepository.class, "charges", new TypeReference<List<Charge>>() {});
@@ -90,8 +133,8 @@ public class Application {
         reset(context, SectionRepository.class, "sections", new TypeReference<List<Section>>() {});
         reset(context, SeatRepository.class, "seats", new TypeReference<List<Seat>>() {});
         reset(context, CategoryRepository.class, "categories", new TypeReference<List<Category>>() {});
-        reset(context, MenuItemRepository.class, "menuItems", new TypeReference<List<MenuItem>>() {});
-        reset(context, ModifierGroupRepository.class, "modifierGroups", new TypeReference<List<ModifierGroup>>() {});
+        reset(context, MenuItemRepository.class, "menuitems", new TypeReference<List<MenuItem>>() {});
+        reset(context, ModifierGroupRepository.class, "modifiergroups", new TypeReference<List<ModifierGroup>>() {});
         reset(context, ModifierRepository.class, "modifiers", new TypeReference<List<Modifier>>() {});
     }
 
@@ -107,9 +150,10 @@ public class Application {
             JpaRepository repo = context.getBean(repositoryClass);
             Resource res = context.getResource("file:./test/" + resource + ".json");
             List<T> items = mapper.readValue(res.getFile(), listTypeRef);
-            System.out.println(repo.save(items).size());
+            log.info("Loaded " + repo.save(items).size() + " items into " + repositoryClass.getSimpleName() + " from" +
+                    " " + res.getFilename());
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            log.warn(e.getMessage());
         }
     }
 

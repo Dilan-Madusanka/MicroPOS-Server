@@ -1,34 +1,34 @@
-package email.com.gmail.ttsai0509.escpos;
+package email.com.gmail.ttsai0509.print;
 
-import gnu.io.NoSuchPortException;
-import gnu.io.PortInUseException;
-import gnu.io.UnsupportedCommOperationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PrinterDispatcherSingleThread implements PrinterDispatcher {
+public class PrinterDispatcherAsync implements PrinterDispatcher {
 
-    private AtomicBoolean closeRequest;
-    private AtomicInteger jobRejected, jobTakeInterrupt,
+    private static final Logger log = LoggerFactory.getLogger(PrinterDispatcherAsync.class);
+
+    private final AtomicBoolean closeRequest, closeRequestPrinters;
+    private final AtomicInteger jobRejected, jobTakeInterrupt,
             jobRequest, jobRequestPass, jobRequestFail,
             jobProcess, jobProcessPass, jobProcessFail;
 
     private Thread currentThread;
-
     private final ConcurrentHashMap<String, Printer> printerMap;
     private final LinkedBlockingQueue<PrintJob> printJobs;
 
-    public PrinterDispatcherSingleThread() throws
-            NoSuchPortException,
-            PortInUseException,
-            UnsupportedCommOperationException {
+    public PrinterDispatcherAsync() {
 
         closeRequest = new AtomicBoolean(false);
+        closeRequestPrinters = new AtomicBoolean(false);
         jobRequest = new AtomicInteger(0);
         jobRequestPass = new AtomicInteger(0);
         jobRequestFail = new AtomicInteger(0);
@@ -43,17 +43,24 @@ public class PrinterDispatcherSingleThread implements PrinterDispatcher {
     }
 
     @Override
+    public List<Printer> getPrinters() {
+        return Collections.unmodifiableList(new ArrayList<>(printerMap.values()));
+    }
+
+    @Override
     public void registerPrinter(Printer printer) {
+        log.debug("Registering printer " + printer.toString());
         printerMap.put(printer.getId(), printer);
     }
 
     @Override
     public void unregisterPrinter(Printer printer) {
+        log.debug("Unregister printer " + printer.toString());
         printerMap.remove(printer.getId());
     }
 
     @Override
-    public boolean requestPrint(String id, byte[] job) {
+    public boolean requestPrint(PrintJob job) {
 
         if (closeRequest.get()) {
 
@@ -64,13 +71,13 @@ public class PrinterDispatcherSingleThread implements PrinterDispatcher {
 
             jobRequest.incrementAndGet();
 
-            if (!printerMap.containsKey(id)) {
+            if (!printerMap.containsKey(job.getTarget())) {
                 jobRequestFail.incrementAndGet();
                 return false;
             }
 
             try {
-                printJobs.put(new PrintJob(id, job));
+                printJobs.put(job);
                 jobRequestPass.incrementAndGet();
                 return true;
 
@@ -83,8 +90,9 @@ public class PrinterDispatcherSingleThread implements PrinterDispatcher {
     }
 
     @Override
-    public void requestClose() {
+    public void requestClose(boolean closePrinters) {
         closeRequest.set(true);
+        closeRequestPrinters.set(closePrinters);
         currentThread.interrupt();
     }
 
@@ -100,7 +108,7 @@ public class PrinterDispatcherSingleThread implements PrinterDispatcher {
 
                 jobProcess.incrementAndGet();
 
-                if (!printerMap.containsKey(job.getId())) {
+                if (!printerMap.containsKey(job.getTarget())) {
 
                     jobProcessFail.incrementAndGet();
 
@@ -108,7 +116,7 @@ public class PrinterDispatcherSingleThread implements PrinterDispatcher {
 
                     try {
                         printerMap
-                                .get(job.getId())
+                                .get(job.getTarget())
                                 .getOutput()
                                 .write(job.getJob());
                         jobProcessPass.incrementAndGet();
@@ -123,11 +131,18 @@ public class PrinterDispatcherSingleThread implements PrinterDispatcher {
             }
 
         }
+
+        log.info("Closing Async Print Dispatcher.");
+
+        if (closeRequestPrinters.get())
+            printerMap.values().forEach(Printer::close);
+
     }
 
     @Override
-    public void printStatus() {
-        System.out.println("\n=====================" +
+    public String getStatus() {
+        return "Printer Dispatcher Status" +
+                "\n=====================" +
                 "\nJobs Requested : " + jobRequest.get() +
                 "\n   Passed      : " + jobRequestPass.get() +
                 "\n   Failed      : " + jobRequestFail.get() +
@@ -136,25 +151,7 @@ public class PrinterDispatcherSingleThread implements PrinterDispatcher {
                 "\n   Failed      : " + jobProcessFail.get() +
                 "\nJobs Rejected  : " + jobRejected.get() +
                 "\nTake Interrupt : " + jobTakeInterrupt.get() +
-                "\n=====================");
-    }
-
-    private static class PrintJob {
-        private final String id;
-        private final byte[] job;
-
-        public PrintJob(String id, byte[] job) {
-            this.id = id;
-            this.job = job;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public byte[] getJob() {
-            return job;
-        }
+                "\n=====================";
     }
 
 }

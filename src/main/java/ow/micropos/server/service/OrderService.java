@@ -273,7 +273,7 @@ public class OrderService {
 
     private void processSalesOrder(SalesOrder item) {
 
-        printService.workOrder(item);
+        printService.printOrder(item);
 
         String text = mapper.asString(item, View.SalesOrder.class);
 
