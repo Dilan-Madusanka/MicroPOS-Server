@@ -9,6 +9,7 @@ import ow.micropos.server.model.Permission;
 import ow.micropos.server.model.View;
 import ow.micropos.server.model.people.Customer;
 import ow.micropos.server.model.people.Employee;
+import ow.micropos.server.model.seating.Section;
 import ow.micropos.server.service.AuthService;
 import ow.micropos.server.service.PeopleService;
 
@@ -47,7 +48,7 @@ public class PeopleController {
 
     }
 
-    @JsonView(value = View.Customer.class)
+    @JsonView(value = View.CustomerWithSalesOrder.class)
     @RequestMapping(value = "/customers", method = RequestMethod.GET)
     public List<Customer> getCustomers(
             HttpServletRequest request
@@ -55,7 +56,20 @@ public class PeopleController {
 
         authService.authorize(request, Permission.GET_CUSTOMERS);
 
-        return pService.getCustomers(false);
+        return pService.getCustomers(true, true);
+
+    }
+
+    @JsonView(value = View.CustomerWithSalesOrder.class)
+    @RequestMapping(value = "/customers/{id}", method = RequestMethod.GET)
+    public Customer getCustomer(
+            HttpServletRequest request,
+            @PathVariable(value = "id") long id
+    ) {
+
+        authService.authorize(request, Permission.GET_CUSTOMERS);
+
+        return pService.getCustomer(id, true, true);
 
     }
 

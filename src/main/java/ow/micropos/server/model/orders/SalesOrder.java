@@ -3,6 +3,7 @@ package ow.micropos.server.model.orders;
 import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;
 import ow.micropos.server.model.enums.ProductEntryStatus;
+import ow.micropos.server.model.menu.Modifier;
 import ow.micropos.server.model.people.Customer;
 import ow.micropos.server.model.people.Employee;
 import ow.micropos.server.model.seating.Seat;
@@ -177,4 +178,13 @@ public class SalesOrder {
         return false;
     }
 
+    public String getSummary() {
+        String summary = "";
+        for (ProductEntry pe : getProductEntries()) {
+            summary += pe.getQuantity() + " " + pe.getMenuItem().getName() + "\n";
+            for (Modifier m : pe.getModifiers())
+                summary += "\t" + m.getName() + "\n";
+        }
+        return summary;
+    }
 }

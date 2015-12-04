@@ -16,6 +16,7 @@ import ow.micropos.server.service.OrderService;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(value = "/orders")
@@ -35,6 +36,20 @@ public class OrderController {
         authService.authorize(request, Permission.GET_DINE_IN_SALES_ORDERS);
 
         return oService.findSalesOrdersBySeat(id, status);
+
+    }
+
+    @JsonView(value = View.SalesOrderAll.class)
+    @RequestMapping(value = "/customer", method = RequestMethod.GET)
+    public List<SalesOrder> getSalesOrderByCustomer(
+            HttpServletRequest request,
+            @RequestParam(value = "id", required = true) long id,
+            @RequestParam(value = "status", required = false) SalesOrderStatus status
+    ) {
+
+        authService.authorize(request, Permission.GET_TAKE_OUT_SALES_ORDERS);
+
+        return oService.findSalesOrdersByCustomer(id, status);
 
     }
 
@@ -84,15 +99,13 @@ public class OrderController {
 
         Employee employee = authService.authorize(request);
 
-        List<Long> ids = new ArrayList<>(salesOrders.size());
-        for (SalesOrder salesOrder : salesOrders) {
-            if (!employee.isOwnerOf(salesOrder))
-                authService.authorize(employee, Permission.ACCESS_ALL_EMPLOYEE_ORDER);
+        if (!employee.isOwnerOf(salesOrders))
+            authService.authorize(employee, Permission.ACCESS_ALL_EMPLOYEE_ORDER);
 
-            ids.add(oService.processOrder(employee, salesOrder));
-        }
-
-        return ids;
+        return salesOrders
+                .stream()
+                .map(salesOrder -> oService.processOrder(employee, salesOrder))
+                .collect(Collectors.toList());
 
     }
 

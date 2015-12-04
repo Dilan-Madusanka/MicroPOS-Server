@@ -3,9 +3,12 @@ package email.com.gmail.ttsai0509.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 
 public class LoggerOutputStream extends OutputStream {
+
+    private static final byte NEWLINE = (byte) '\n';
 
     public enum Level {
         NONE, INFO, DEBUG, WARN, ERROR, TRACE
@@ -13,12 +16,12 @@ public class LoggerOutputStream extends OutputStream {
 
     private final Logger logger;
     private final Level level;
-    private String mem;
+    private ByteArrayOutputStream mem;
 
     public LoggerOutputStream(Logger logger, Level level) {
         this.logger = logger;
         this.level = level;
-        mem = "";
+        this.mem = new ByteArrayOutputStream();
     }
 
     public LoggerOutputStream(Class<?> clazz, Level level) {
@@ -27,14 +30,10 @@ public class LoggerOutputStream extends OutputStream {
 
     @Override
     public void write(int b) {
-        byte[] bytes = new byte[1];
-        bytes[0] = (byte) (b & 0xff);
-        mem = mem + new String(bytes);
-
-        if (mem.endsWith("\n")) {
-            mem = mem.substring(0, mem.length() - 1);
+        if (b == NEWLINE)
             flush();
-        }
+        else
+            mem.write(b);
     }
 
     @Override
@@ -43,23 +42,23 @@ public class LoggerOutputStream extends OutputStream {
             case NONE:
                 break;
             case INFO:
-                logger.info(mem);
+                logger.info(mem.toString());
                 break;
             case DEBUG:
-                logger.debug(mem);
+                logger.debug(mem.toString());
                 break;
             case WARN:
-                logger.warn(mem);
+                logger.warn(mem.toString());
                 break;
             case ERROR:
-                logger.error(mem);
+                logger.error(mem.toString());
                 break;
             case TRACE:
-                logger.trace(mem);
+                logger.trace(mem.toString());
                 break;
             default:
-                logger.info(mem);
+                logger.info(mem.toString());
         }
-        mem = "";
+        mem.reset();
     }
 }

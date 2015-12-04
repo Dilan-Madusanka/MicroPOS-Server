@@ -1,5 +1,7 @@
 package ow.micropos.server.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,11 +14,13 @@ import ow.micropos.server.model.orders.ChargeEntry;
 import ow.micropos.server.model.orders.PaymentEntry;
 import ow.micropos.server.model.orders.ProductEntry;
 import ow.micropos.server.model.orders.SalesOrder;
+import ow.micropos.server.model.people.Customer;
 import ow.micropos.server.model.people.Employee;
 import ow.micropos.server.repository.orders.ChargeEntryRepository;
 import ow.micropos.server.repository.orders.PaymentEntryRepository;
 import ow.micropos.server.repository.orders.ProductEntryRepository;
 import ow.micropos.server.repository.orders.SalesOrderRepository;
+import ow.micropos.server.repository.people.CustomerRepository;
 import ow.micropos.server.repository.seating.SeatRepository;
 
 import javax.annotation.Nullable;
@@ -27,8 +31,11 @@ import java.util.stream.Collectors;
 @Service
 public class OrderService {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
+
     @Autowired ObjectViewMapper mapper;
     @Autowired SeatRepository seatRepo;
+    @Autowired CustomerRepository customerRepo;
     @Autowired SalesOrderRepository soRepo;
     @Autowired PaymentEntryRepository payRepo;
     @Autowired ProductEntryRepository prodRepo;
@@ -67,6 +74,19 @@ public class OrderService {
         else
             return seatRepo.findOne(id).getSalesOrders();
     }
+
+    @Transactional(readOnly = true)
+    public List<SalesOrder> findSalesOrdersByCustomer(long id, SalesOrderStatus status) {
+        if (status != null)
+            return customerRepo.findOne(id)
+                    .getSalesOrders()
+                    .stream()
+                    .filter(so -> so.hasStatus(status))
+                    .collect(Collectors.toList());
+        else
+            return customerRepo.findOne(id).getSalesOrders();
+    }
+
 
     @Transactional(readOnly = false)
     public long saveSalesOrder(SalesOrder salesOrder) {
@@ -125,6 +145,13 @@ public class OrderService {
 
         currOrder.getProductEntries()
                 .forEach(this::processProductEntry);
+
+        // Update Customer Previous Order
+        if (currOrder.hasType(SalesOrderType.TAKEOUT) && currOrder.getCustomer() != null) {
+            Customer customer = customerRepo.findOne(currOrder.getCustomer().getId());
+            customer.setPreviousOrder(currOrder.getSummary());
+            customerRepo.save(customer);
+        }
 
         return id;
 
@@ -196,6 +223,7 @@ public class OrderService {
 
                 case REQUEST_VOID:
                     authService.authorize(employee, Permission.VOID_PRODUCT_ENTRY);
+                    break;
 
                 default:
                     if (currPE.getStatus() != prevPE.getStatus())
@@ -280,25 +308,25 @@ public class OrderService {
         switch (item.getStatus()) {
 
             case REQUEST_OPEN:
-                System.out.println("Opening\t" + text);
+                log.debug("Opening\t" + text);
                 item.setStatus(SalesOrderStatus.OPEN);
                 soRepo.save(item);
                 break;
 
             case REQUEST_CLOSE:
-                System.out.println("Closing\t" + text);
+                log.debug("Closing\t" + text);
                 item.setStatus(SalesOrderStatus.CLOSED);
                 soRepo.save(item);
                 break;
 
             case REQUEST_VOID:
-                System.out.println("Voiding\t" + text);
+                log.debug("Voiding\t" + text);
                 item.setStatus(SalesOrderStatus.VOID);
                 soRepo.save(item);
                 break;
 
             default:
-                System.out.println("Skipped\t" + text);
+                log.debug("Skipped\t" + text);
         }
 
     }
@@ -310,31 +338,31 @@ public class OrderService {
         switch (item.getStatus()) {
 
             case REQUEST_SENT:
-                System.out.println("\tSending\t" + text);
+                log.debug("\tSending\t" + text);
                 item.setStatus(ProductEntryStatus.SENT);
                 prodRepo.save(item);
                 break;
 
             case REQUEST_HOLD:
-                System.out.println("\tHolding\t" + text);
+                log.debug("\tHolding\t" + text);
                 item.setStatus(ProductEntryStatus.HOLD);
                 prodRepo.save(item);
                 break;
 
             case REQUEST_EDIT:
-                System.out.println("\tEditing\t" + text);
+                log.debug("\tEditing\t" + text);
                 item.setStatus(ProductEntryStatus.SENT);
                 prodRepo.save(item);
                 break;
 
             case REQUEST_VOID:
-                System.out.println("\tVoiding\t" + text);
+                log.debug("\tVoiding\t" + text);
                 item.setStatus(ProductEntryStatus.VOID);
                 prodRepo.save(item);
                 break;
 
             default:
-                System.out.println("\tSkipped\t" + text);
+                log.debug("\tSkipped\t" + text);
         }
     }
 

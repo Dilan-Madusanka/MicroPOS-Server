@@ -5,12 +5,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ow.micropos.server.exception.InternalServerErrorException;
 import ow.micropos.server.exception.InvalidParameterException;
+import ow.micropos.server.model.enums.SalesOrderStatus;
+import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.people.Customer;
 import ow.micropos.server.model.people.Employee;
+import ow.micropos.server.model.seating.Seat;
+import ow.micropos.server.model.seating.Section;
 import ow.micropos.server.repository.people.CustomerRepository;
 import ow.micropos.server.repository.people.EmployeeRepository;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PeopleService {
@@ -51,10 +57,12 @@ public class PeopleService {
 
     }
 
+
     @Transactional(readOnly = true)
-    public List<Customer> getCustomers(boolean filterArchived) {
+    public List<Customer> getCustomers(boolean filterArchived, boolean earliestOpen) {
 
         List<Customer> customers;
+
         if (filterArchived)
             customers = cRepo.findByArchived(false);
         else
@@ -63,8 +71,29 @@ public class PeopleService {
         if (customers == null)
             throw new InternalServerErrorException("Customer repository error.");
 
+        if (earliestOpen)
+            customers.forEach(this::filterEarliestOpen);
+
         return customers;
 
+    }
+
+
+    @Transactional(readOnly = true)
+    public Customer getCustomer(long id, boolean filterArchived, boolean earliestOpen) {
+
+        Customer customer = cRepo.findOne(id);
+
+        if (filterArchived && customer.isArchived())
+            throw new InternalServerErrorException("Customer archived");
+
+        if (customer == null)
+            throw new InternalServerErrorException("Customer repository error.");
+
+        if (earliestOpen)
+            filterEarliestOpen(customer);
+
+        return customer;
 
     }
 
@@ -75,6 +104,20 @@ public class PeopleService {
 
         return cRepo.save(customer).getId();
 
+    }
+
+    private void filterEarliestOpen(Customer customer) {
+        SalesOrder earliest = customer.getSalesOrders()
+                .stream()
+                .filter(so -> so.getStatus() == SalesOrderStatus.OPEN)
+                .min((o1, o2) -> o1.getDate().compareTo(o2.getDate()))
+                .orElse(null);
+
+        List<SalesOrder> earliestAsList = new ArrayList<>();
+        if (earliest != null)
+            earliestAsList.add(earliest);
+
+        customer.setSalesOrders(earliestAsList);
     }
 
 }

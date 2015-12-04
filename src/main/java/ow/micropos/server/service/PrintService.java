@@ -45,8 +45,8 @@ public class PrintService {
         List<String> uniquePrinters = new ArrayList<>();
         for (ProductEntry pe : o.getProductEntries()) {
 
-            MenuItem mi = miRepo.findOne(pe.getMenuItem().getId());
-            List<String> printers = mi.getPrinters();
+            // Menu Items need to be reattached to the context to determine printers
+            List<String> printers = miRepo.findOne(pe.getMenuItem().getId()).getPrinters();
             for (String printer : printers) {
                 if (!uniquePrinters.contains(printer))
                     uniquePrinters.add(printer);

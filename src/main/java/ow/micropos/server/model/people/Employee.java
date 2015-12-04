@@ -71,4 +71,13 @@ public class Employee {
                 && Objects.equals(id, salesOrder.getEmployee().getId());
     }
 
+    public boolean isOwnerOf(List<SalesOrder> salesOrders) {
+        for (SalesOrder salesOrder : salesOrders) {
+            if (!isOwnerOf(salesOrder)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }
