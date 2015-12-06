@@ -3,10 +3,12 @@ package ow.micropos.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import email.com.gmail.ttsai0509.escpos.ESCPos;
-import email.com.gmail.ttsai0509.print.Printer;
-import email.com.gmail.ttsai0509.print.PrinterDispatcher;
-import email.com.gmail.ttsai0509.print.PrinterDispatcherAsync;
+import email.com.gmail.ttsai0509.escpos.dispatcher.PrinterDispatcher;
+import email.com.gmail.ttsai0509.escpos.dispatcher.PrinterDispatcherAsync;
+import email.com.gmail.ttsai0509.escpos.printer.RawPrinter;
+import email.com.gmail.ttsai0509.escpos.printer.TextPrinter;
 import email.com.gmail.ttsai0509.utils.LoggerOutputStream;
+import email.com.gmail.ttsai0509.utils.NullOutputStream;
 import gnu.io.SerialPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +47,7 @@ import ow.micropos.server.repository.seating.SectionRepository;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,13 +77,13 @@ public class Application {
         Map<String, OutputStream> deviceMap = new HashMap<>();
         deviceMap.put("CLI", System.out);
         deviceMap.put("LOG", new LoggerOutputStream(PrinterDispatcher.class, LoggerOutputStream.Level.INFO));
+        deviceMap.put("NULL", new NullOutputStream());
 
         for (String printerConfig : printerConfigs) {
 
             String[] config = printerConfig.split(",");
-
             if (config.length < 2) {
-                log.warn("Invalid printer configuration : " + printerConfig);
+                log.warn("Printer config missing parameters : " + printerConfig);
                 continue;
             }
 
@@ -92,15 +95,18 @@ public class Application {
                     SerialPort sp = ESCPos.connectSerialPort(printerDevice);
                     deviceMap.put(printerDevice, sp.getOutputStream());
                 } catch (Error e) {
-                    log.error("Could not load serial drivers.");
-                    deviceMap.put(printerDevice, System.out);
+                    log.error("Unable to load serial drivers. " + printerName + " using LOG instead.");
+                    printerDevice = "LOG";
                 } catch (Exception e) {
-                    log.warn("Unable to open serial port " + printerDevice);
-                    deviceMap.put(printerDevice, System.out);
+                    log.warn("Unable to open serial port " + printerDevice + ". " + printerName + " using LOG instead");
+                    printerDevice = "LOG";
                 }
             }
 
-            pd.registerPrinter(Printer.streamPrinter(printerName, deviceMap.get(printerDevice)));
+            if (printerDevice.equals("CLI"))
+                pd.registerPrinter(new TextPrinter(printerName, new PrintStream(deviceMap.get(printerDevice))));
+            else
+                pd.registerPrinter(new RawPrinter(printerName, deviceMap.get(printerDevice)));
 
         }
 

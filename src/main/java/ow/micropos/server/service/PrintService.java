@@ -1,8 +1,10 @@
 package ow.micropos.server.service;
 
 import email.com.gmail.ttsai0509.escpos.ESCPos;
-import email.com.gmail.ttsai0509.print.PrintJob;
-import email.com.gmail.ttsai0509.print.PrinterDispatcher;
+import email.com.gmail.ttsai0509.escpos.PrintJob;
+import email.com.gmail.ttsai0509.escpos.dispatcher.PrinterDispatcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class PrintService {
+
+    private static final Logger log = LoggerFactory.getLogger(PrintService.class);
 
     @Autowired
     ObjectViewMapper mapper;
@@ -75,7 +79,7 @@ public class PrintService {
         return true;
     }
 
-    public class MicroPOSCommander {
+    private class MicroPOSCommander {
 
         private final ByteArrayOutputStream out;
         private final ESCPos.Commander commander;
@@ -149,9 +153,13 @@ public class PrintService {
         public MicroPOSCommander salesOrder(String printer, SalesOrder so) throws IOException {
 
             List<ProductEntry> toPrint = so.getProductEntries().stream()
-                    .filter(pe -> pe.hasStatus(ProductEntryStatus.REQUEST_SENT) &&
-                                    miRepo.findOne(pe.getMenuItem().getId()).getPrinters().contains(printer)
-                    )
+                    .filter(pe -> {
+                        MenuItem mi = miRepo.findOne(pe.getMenuItem().getId());
+                        return mi.getPrinters().contains(printer) &&
+                                (pe.hasStatus(ProductEntryStatus.REQUEST_SENT)
+                                        || pe.hasStatus(ProductEntryStatus.REQUEST_EDIT)
+                                        || pe.hasStatus(ProductEntryStatus.REQUEST_VOID));
+                    })
                     .collect(Collectors.toList());
 
             if (!toPrint.isEmpty()) {
@@ -182,6 +190,21 @@ public class PrintService {
         }
 
         private MicroPOSCommander productEntry(ProductEntry pe) throws IOException {
+            switch (pe.getStatus()) {
+                case REQUEST_SENT:
+                    print("  ");
+                    break;
+                case REQUEST_VOID:
+                    print("*V");
+                    break;
+                case REQUEST_EDIT:
+                    print("*E");
+                    break;
+                default:
+                    log.warn("Unexpected Product Entry " + pe.toString());
+                    return this;
+            }
+
             print(pe.getQuantity().setScale(0, BigDecimal.ROUND_FLOOR).toString())
                     .print(" ")
                     .print(pe.getMenuItem().getTag())
@@ -196,7 +219,7 @@ public class PrintService {
         }
 
         private MicroPOSCommander modifier(Modifier mod) throws IOException {
-            return print("   ").print(mod.getName());
+            return print("      ").print(mod.getName());
         }
 
     }

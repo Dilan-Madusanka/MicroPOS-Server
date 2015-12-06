@@ -1,6 +1,8 @@
 package email.com.gmail.ttsai0509.escpos;
 
 import gnu.io.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -30,18 +32,22 @@ import java.util.Enumeration;
 
 public final class ESCPos {
 
+    private static final Logger log = LoggerFactory.getLogger(ESCPos.class);
+
     /*=======================================================================*
      =                                                                       =
      = Port Discovery                                                        =
      =                                                                       =
      *=======================================================================*/
 
-    public static void listPorts() {
+    public static String listPorts() {
+        String ports = "";
         Enumeration<CommPortIdentifier> portEnum = CommPortIdentifier.getPortIdentifiers();
         while (portEnum.hasMoreElements()) {
             CommPortIdentifier portIdentifier = portEnum.nextElement();
-            System.out.println(portIdentifier.getName() + " - " + getPortTypeName(portIdentifier.getPortType()));
+            ports += portIdentifier.getName() + " - " + getPortTypeName(portIdentifier.getPortType()) + "\n";
         }
+        return ports;
     }
 
     private static String getPortTypeName(int portType) {
@@ -89,16 +95,23 @@ public final class ESCPos {
             NoSuchPortException,
             PortInUseException,
             UnsupportedCommOperationException {
+        
+        log.info("Connecting to Serial Port " + portName);
 
         CommPortIdentifier commPortId = CommPortIdentifier.getPortIdentifier(portName);
-        System.out.println(portName + " found.");
+        log.info("    Name      : " + commPortId.getName());
+        log.info("    Type      : " + getPortTypeName(commPortId.getPortType()));
+        log.info("    Owner     : " + commPortId.getCurrentOwner());
 
         CommPort commPort = commPortId.open(ESCPos.class.getSimpleName(), 2000);
-        System.out.println(portName + " opened.");
+        log.info("    Opened    : " + true);
 
         SerialPort serialPort = (SerialPort) commPort;
         serialPort.setSerialPortParams(config.baud, config.dataBits, config.stopBits, config.parity);
-        System.out.println(portName + " configured.");
+        log.info("    Baud      : " + config.baud);
+        log.info("    Data Bits : " + config.dataBits);
+        log.info("    Stop Bits : " + config.stopBits);
+        log.info("    Parity    : " + config.parity);
 
         return serialPort;
     }
@@ -116,11 +129,15 @@ public final class ESCPos {
             PortInUseException,
             UnsupportedCommOperationException {
 
+        log.info("Connecting to Comm Port " + portName);
+
         CommPortIdentifier commPortId = CommPortIdentifier.getPortIdentifier(portName);
-        System.out.println(portName + " found.");
+        log.info("    Name      : " + commPortId.getName());
+        log.info("    Type      : " + getPortTypeName(commPortId.getPortType()));
+        log.info("    Owner     : " + commPortId.getCurrentOwner());
 
         CommPort commPort = commPortId.open(ESCPos.class.getSimpleName(), 2000);
-        System.out.println(portName + " opened.");
+        log.info("    Opened    : " + true);
 
         return commPort;
     }
@@ -185,6 +202,17 @@ public final class ESCPos {
      =                                                                       =
      *=======================================================================*/
 
+    public static boolean isCommand(byte[] command, byte ... bytes) {
+        if (command.length != bytes.length)
+            return false;
+
+        for (int i = 0; i < command.length; i++)
+            if (command[i] != bytes[i])
+                return false;
+
+        return true;
+    }
+
     public static final byte[] INITIALIZE = new byte[]{0x1B, 0x40};
 
     public static final byte[] FEED = new byte[]{0x0A};
@@ -212,11 +240,5 @@ public final class ESCPos {
 
     public static final int ROW_SIZE_REG = 42;
     public static final int ROW_SIZE_DW = 21;
-
-    /*=======================================================================*
-     =                                                                       =
-     = Byte Utils
-     =                                                                       =
-     *=======================================================================*/
 
 }
