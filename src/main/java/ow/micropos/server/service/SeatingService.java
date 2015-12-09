@@ -60,6 +60,12 @@ public class SeatingService {
 
     }
 
+    /******************************************************************
+     *                                                                *
+     * Filtering Methods                                              *
+     *                                                                *
+     ******************************************************************/
+
     private void filterArchived(Section section) {
         section.setSeats(section.getSeats()
                 .stream()

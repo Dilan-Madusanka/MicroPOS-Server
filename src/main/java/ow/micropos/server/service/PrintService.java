@@ -20,41 +20,32 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class PrintService {
 
     private static final Logger log = LoggerFactory.getLogger(PrintService.class);
-
-    @Autowired
-    ObjectViewMapper mapper;
-
-    @Autowired
-    MenuItemRepository miRepo;
-
-    @Autowired
-    @Qualifier(value = "printerDispatcher")
-    PrinterDispatcher pd;
-
     private static final SimpleDateFormat date = new SimpleDateFormat("MM/dd/yy hh:mm a");
+
+    @Autowired ObjectViewMapper mapper;
+    @Autowired MenuItemRepository miRepo;
+    @Autowired PrinterDispatcher pd;
+
     private final MicroPOSCommander cmd = new MicroPOSCommander();
 
     public boolean printOrder(SalesOrder o) {
 
         // Collect all relevant printers
-        List<String> uniquePrinters = new ArrayList<>();
+        Set<String> uniquePrinters = new HashSet<>();
         for (ProductEntry pe : o.getProductEntries()) {
 
-            // Menu Items need to be reattached to the context to determine printers
-            List<String> printers = miRepo.findOne(pe.getMenuItem().getId()).getPrinters();
-            for (String printer : printers) {
-                if (!uniquePrinters.contains(printer))
-                    uniquePrinters.add(printer);
-            }
+            // Menu Items need to be reattached to the context to determine printers.
+            // Client-side sales order may not (should not) know about server printers.
+            long id = pe.getMenuItem().getId();
+            List<String> printers = miRepo.findOne(id).getPrinters();
+            uniquePrinters.addAll(printers);
         }
 
         // Print the sales order to each one

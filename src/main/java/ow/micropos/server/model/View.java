@@ -4,25 +4,17 @@ public final class View {
 
     private View() {}
 
+    /******************************************************************
+     *                                                                *
+     * Menu
+     *                                                                *
+     ******************************************************************/
+
+    public interface Menu extends CategoryWithMenuItem, ModifierGroupWithModifier {}
+
     public interface Category {}
-
     public interface CategoryWithMenuItem extends Category, MenuItem {}
-
     public interface CategoryAll extends Category, CategoryWithMenuItem {}
-
-    public interface Customer {}
-
-    public interface CustomerWithSalesOrder extends Customer, SalesOrder {}
-
-    public interface CustomerAll extends Customer, CustomerWithSalesOrder {}
-
-    public interface Employee {}
-
-    public interface EmployeeWithSalesOrder extends Employee, SalesOrder {}
-
-    public interface EmployeeWithPosition extends Employee, Position {}
-
-    public interface EmployeeAll extends Employee, EmployeeWithSalesOrder, EmployeeWithPosition {}
 
     public interface MenuItem {}
 
@@ -46,21 +38,23 @@ public final class View {
 
     public interface ModifierGroupAll extends ModifierGroup, ModifierGroupWithModifier {}
 
-    public interface SalesOrder {}
+    /******************************************************************
+     *                                                                *
+     * Charges
+     *                                                                *
+     ******************************************************************/
 
-    public interface SalesOrderEmployee extends SalesOrder, Employee {}
+    public interface Charge {}
 
-    public interface SalesOrderTarget extends SalesOrder, Customer, Seat {}
+    public interface ChargeWithChargeEntry extends ChargeEntry {}
 
-    public interface SalesOrderDetails extends SalesOrder, ProductEntry, PaymentEntry {}
+    public interface ChargeAll extends Charge {}
 
-    public interface SalesOrderAll extends SalesOrder, SalesOrderEmployee, SalesOrderTarget, SalesOrderDetails {}
-
-    public interface ProductEntry extends MenuItem, Modifier {}
-
-    public interface ProductEntryWithSalesOrder extends ProductEntry, SalesOrder {}
-
-    public interface ProductEntryAll extends ProductEntry, ProductEntryWithSalesOrder {}
+    /******************************************************************
+     *                                                                *
+     * Seating
+     *                                                                *
+     ******************************************************************/
 
     public interface Seat {}
 
@@ -79,30 +73,73 @@ public final class View {
     public interface SectionWithSalesOrder extends SectionWithSeat, SeatWithSalesOrder, SalesOrderEmployee,
             SalesOrderDetails {}
 
+    /******************************************************************
+     *                                                                *
+     * People
+     *                                                                *
+     ******************************************************************/
+
+    public interface Customer {}
+    public interface CustomerWithSalesOrder extends Customer, SalesOrder {}
+    public interface CustomerAll extends Customer, CustomerWithSalesOrder {}
+
+    public interface Employee {}
+    public interface EmployeeWithSalesOrder extends Employee, SalesOrder {}
+    public interface EmployeeWithPosition extends Employee, Position {}
+    public interface EmployeeAll extends Employee, EmployeeWithSalesOrder, EmployeeWithPosition {}
+
+    /******************************************************************
+     *                                                                *
+     * Authorization
+     *                                                                *
+     ******************************************************************/
+
+    public interface Role {}
+
+    public interface RoleWithPosition extends Role, Position {}
+
+    public interface Position {}
+
+    public interface PositionWithEmployee extends Position, Employee {}
+
+    public interface PositionAll extends Position, PositionWithEmployee {}
+
+    /******************************************************************
+     *                                                                *
+     * Order
+     *                                                                *
+     ******************************************************************/
+
+    public interface ChargeEntry extends Charge {}
+
+    public interface ChargeEntryWithSalesOrder extends ChargeEntry {}
+
+    public interface ChargeEntryAll extends ChargeEntryWithSalesOrder, ChargeWithChargeEntry {}
+
     public interface PaymentEntry {}
 
     public interface PaymentEntryWithSalesOrder extends PaymentEntry, SalesOrder {}
 
     public interface PaymentEntryAll extends PaymentEntry, PaymentEntryWithSalesOrder {}
 
-    public interface Menu extends CategoryWithMenuItem, ModifierGroupWithModifier {}
+    public interface ProductEntry extends MenuItem, Modifier {}
 
-    public interface PrimaryMenu extends Menu {}
+    public interface ProductEntryWithSalesOrder extends ProductEntry, SalesOrder {}
 
-    public interface SecondaryMenu extends Menu {}
+    public interface ProductEntryAll extends ProductEntry, ProductEntryWithSalesOrder {}
 
-    public interface MenuAll extends Menu, PrimaryMenu, SecondaryMenu {}
+    public interface SalesOrder {}
+    public interface SalesOrderEmployee extends SalesOrder, Employee {}
+    public interface SalesOrderTarget extends SalesOrder, Customer, Seat {}
 
-    public interface SalesOrderRecord {}
+    public interface SalesOrderDetails extends SalesOrder, ProductEntry, PaymentEntry, ChargeEntry {}
+    public interface SalesOrderAll extends SalesOrder, SalesOrderEmployee, SalesOrderTarget, SalesOrderDetails {}
 
-    public interface SalesOrderRecordEmployee extends SalesOrderRecord, Employee {}
-
-    public interface SalesOrderRecordTarget extends SalesOrderRecord, Customer, Seat {}
-
-    public interface SalesOrderRecordDetails extends SalesOrderRecord, ProductEntryRecord, PaymentEntryRecord {}
-
-    public interface SalesOrderRecordAll extends SalesOrderRecord, SalesOrderRecordEmployee, SalesOrderRecordTarget,
-            SalesOrderRecordDetails {}
+    /******************************************************************
+     *                                                                *
+     * Order Records
+     *                                                                *
+     ******************************************************************/
 
     public interface PaymentEntryRecord {}
 
@@ -116,27 +153,20 @@ public final class View {
 
     public interface ProductEntryRecordAll extends ProductEntryRecord, ProductEntryRecordWithSalesOrderRecord {}
 
-    public interface Role {}
+    public interface SalesOrderRecord {}
+    public interface SalesOrderRecordEmployee extends SalesOrderRecord, Employee {}
+    public interface SalesOrderRecordTarget extends SalesOrderRecord, Customer, Seat {}
+    public interface SalesOrderRecordDetails extends SalesOrderRecord, ProductEntryRecord, PaymentEntryRecord {}
+    public interface SalesOrderRecordAll extends SalesOrderRecord, SalesOrderRecordEmployee, SalesOrderRecordTarget,
+            SalesOrderRecordDetails {}
 
-    public interface RoleWithPosition extends Role, Position {}
 
-    public interface Position {}
-
-    public interface PositionWithEmployee extends Position, Employee {}
-
-    public interface PositionAll extends Position, PositionWithEmployee {}
+    /******************************************************************
+     *                                                                *
+     * Reporting
+     *                                                                *
+     ******************************************************************/
 
     public interface SimpleReport {}
 
-    public interface Charge {}
-
-    public interface ChargeAll extends Charge {}
-
-    public interface ChargeEntry {}
-
-    public interface ChargeEntryWithSalesOrder extends ChargeEntry {}
-
-    public interface ChargeWithChargeEntry extends ChargeEntry {}
-
-    public interface ChargeEntryAll extends ChargeEntryWithSalesOrder, ChargeWithChargeEntry {}
 }

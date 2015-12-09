@@ -66,8 +66,8 @@ public class Application {
 
     private static final Logger log = LoggerFactory.getLogger(Application.class);
 
+    @Bean
     @Value("${micropos.printers}")
-    @Bean(name = "printerDispatcher")
     PrinterDispatcher printerDispatcher(String microposPrinters) {
 
         PrinterDispatcher pd = new PrinterDispatcherAsync();
