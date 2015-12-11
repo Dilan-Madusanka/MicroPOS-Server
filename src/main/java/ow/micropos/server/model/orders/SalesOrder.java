@@ -169,15 +169,6 @@ public class SalesOrder {
         return getType() == type;
     }
 
-    public boolean hasVoidRequest() {
-        if (hasStatus(SalesOrderStatus.REQUEST_VOID))
-            return true;
-        for (ProductEntry prod : productEntries)
-            if (prod.hasStatus(ProductEntryStatus.REQUEST_VOID))
-                return true;
-        return false;
-    }
-
     public String getSummary() {
         String summary = "";
         for (ProductEntry pe : getProductEntries()) {

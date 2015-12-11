@@ -1,5 +1,6 @@
 package ow.micropos.server.model;
 
+//@formatter:off
 public final class View {
 
     private View() {}
@@ -17,25 +18,18 @@ public final class View {
     public interface CategoryAll extends Category, CategoryWithMenuItem {}
 
     public interface MenuItem {}
-
     public interface MenuItemWithCategory extends MenuItem, Category {}
-
     public interface MenuItemWithSalesOrder extends MenuItem, SalesOrder {}
-
-    public interface MenuItemAll extends MenuItem, MenuItemWithCategory, MenuItemWithSalesOrder {}
+    public interface MenuItemEdit extends MenuItem, MenuItemWithCategory {}
+    public interface MenuItemAll extends MenuItem, MenuItemWithCategory, MenuItemWithSalesOrder, MenuItemEdit {}
 
     public interface Modifier {}
-
     public interface ModifierWithModifierGroup extends Modifier, ModifierGroup {}
-
     public interface ModifierWithProductEntry extends Modifier, ProductEntry {}
-
     public interface ModifierAll extends Modifier, ModifierWithModifierGroup, ModifierWithProductEntry {}
 
     public interface ModifierGroup {}
-
     public interface ModifierGroupWithModifier extends ModifierGroup, Modifier {}
-
     public interface ModifierGroupAll extends ModifierGroup, ModifierGroupWithModifier {}
 
     /******************************************************************
@@ -45,9 +39,7 @@ public final class View {
      ******************************************************************/
 
     public interface Charge {}
-
     public interface ChargeWithChargeEntry extends ChargeEntry {}
-
     public interface ChargeAll extends Charge {}
 
     /******************************************************************
@@ -57,20 +49,17 @@ public final class View {
      ******************************************************************/
 
     public interface Seat {}
-
     public interface SeatWithSection extends Seat, Section {}
-
     public interface SeatWithSalesOrder extends Seat, SalesOrder {}
-
     public interface SeatAll extends Seat, SeatWithSection, SeatWithSalesOrder {}
 
     public interface Section {}
-
     public interface SectionWithSeat extends Section, Seat {}
-
     public interface SectionAll extends Section, SectionWithSeat {}
-
-    public interface SectionWithSalesOrder extends SectionWithSeat, SeatWithSalesOrder, SalesOrderEmployee,
+    public interface SectionWithSalesOrder extends
+            SectionWithSeat,
+            SeatWithSalesOrder,
+            SalesOrderEmployee,
             SalesOrderDetails {}
 
     /******************************************************************
@@ -95,13 +84,10 @@ public final class View {
      ******************************************************************/
 
     public interface Role {}
-
     public interface RoleWithPosition extends Role, Position {}
 
     public interface Position {}
-
     public interface PositionWithEmployee extends Position, Employee {}
-
     public interface PositionAll extends Position, PositionWithEmployee {}
 
     /******************************************************************
@@ -111,27 +97,20 @@ public final class View {
      ******************************************************************/
 
     public interface ChargeEntry extends Charge {}
-
-    public interface ChargeEntryWithSalesOrder extends ChargeEntry {}
-
-    public interface ChargeEntryAll extends ChargeEntryWithSalesOrder, ChargeWithChargeEntry {}
+    public interface ChargeEntryWithSalesOrder extends ChargeEntry, SalesOrder {}
+    public interface ChargeEntryAll extends ChargeEntry, ChargeEntryWithSalesOrder {}
 
     public interface PaymentEntry {}
-
     public interface PaymentEntryWithSalesOrder extends PaymentEntry, SalesOrder {}
-
     public interface PaymentEntryAll extends PaymentEntry, PaymentEntryWithSalesOrder {}
 
     public interface ProductEntry extends MenuItem, Modifier {}
-
     public interface ProductEntryWithSalesOrder extends ProductEntry, SalesOrder {}
-
     public interface ProductEntryAll extends ProductEntry, ProductEntryWithSalesOrder {}
 
     public interface SalesOrder {}
     public interface SalesOrderEmployee extends SalesOrder, Employee {}
     public interface SalesOrderTarget extends SalesOrder, Customer, Seat {}
-
     public interface SalesOrderDetails extends SalesOrder, ProductEntry, PaymentEntry, ChargeEntry {}
     public interface SalesOrderAll extends SalesOrder, SalesOrderEmployee, SalesOrderTarget, SalesOrderDetails {}
 
@@ -140,26 +119,32 @@ public final class View {
      * Order Records
      *                                                                *
      ******************************************************************/
-
+    
+    public interface ChargeEntryRecord extends Charge {}
+    public interface ChargeEntryRecordWithSalesOrderRecord extends ChargeEntryRecord, SalesOrderRecord {}
+    public interface ChargeEntryRecordAll extends ChargeEntryRecord, ChargeEntryRecordWithSalesOrderRecord {}
+    
     public interface PaymentEntryRecord {}
-
     public interface PaymentEntryRecordWithSalesOrderRecord extends PaymentEntryRecord, SalesOrderRecord {}
-
     public interface PaymentEntryRecordAll extends PaymentEntryRecord, PaymentEntryRecordWithSalesOrderRecord {}
-
+    
     public interface ProductEntryRecord extends MenuItem, Modifier {}
-
     public interface ProductEntryRecordWithSalesOrderRecord extends ProductEntryRecord, SalesOrderRecord {}
-
     public interface ProductEntryRecordAll extends ProductEntryRecord, ProductEntryRecordWithSalesOrderRecord {}
 
     public interface SalesOrderRecord {}
     public interface SalesOrderRecordEmployee extends SalesOrderRecord, Employee {}
     public interface SalesOrderRecordTarget extends SalesOrderRecord, Customer, Seat {}
-    public interface SalesOrderRecordDetails extends SalesOrderRecord, ProductEntryRecord, PaymentEntryRecord {}
-    public interface SalesOrderRecordAll extends SalesOrderRecord, SalesOrderRecordEmployee, SalesOrderRecordTarget,
+    public interface SalesOrderRecordDetails extends
+            SalesOrderRecord,
+            ProductEntryRecord,
+            PaymentEntryRecord,
+            ChargeEntryRecord {}
+    public interface SalesOrderRecordAll extends
+            SalesOrderRecord,
+            SalesOrderRecordEmployee,
+            SalesOrderRecordTarget,
             SalesOrderRecordDetails {}
-
 
     /******************************************************************
      *                                                                *
@@ -170,3 +155,4 @@ public final class View {
     public interface SimpleReport {}
 
 }
+//@formatter:on

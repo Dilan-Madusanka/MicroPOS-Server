@@ -6,14 +6,18 @@ import org.springframework.transaction.annotation.Transactional;
 import ow.micropos.server.exception.InternalServerErrorException;
 import ow.micropos.server.exception.NoSalesOrdersException;
 import ow.micropos.server.exception.UnpaidOrdersException;
+import ow.micropos.server.model.View;
 import ow.micropos.server.model.enums.SalesOrderStatus;
 import ow.micropos.server.model.orders.SalesOrder;
+import ow.micropos.server.model.records.ChargeEntryRecord;
 import ow.micropos.server.model.records.PaymentEntryRecord;
 import ow.micropos.server.model.records.ProductEntryRecord;
 import ow.micropos.server.model.records.SalesOrderRecord;
+import ow.micropos.server.repository.orders.ChargeEntryRepository;
 import ow.micropos.server.repository.orders.PaymentEntryRepository;
 import ow.micropos.server.repository.orders.ProductEntryRepository;
 import ow.micropos.server.repository.orders.SalesOrderRepository;
+import ow.micropos.server.repository.records.ChargeEntryRecordRepository;
 import ow.micropos.server.repository.records.PaymentEntryRecordRepository;
 import ow.micropos.server.repository.records.ProductEntryRecordRepository;
 import ow.micropos.server.repository.records.SalesOrderRecordRepository;
@@ -24,10 +28,12 @@ import java.util.stream.Collectors;
 @Service
 public class MigrationService {
 
+    @Autowired ChargeEntryRepository chRepo;
     @Autowired ProductEntryRepository prodRepo;
     @Autowired PaymentEntryRepository payRepo;
     @Autowired SalesOrderRepository soRepo;
 
+    @Autowired ChargeEntryRecordRepository chrRepo;
     @Autowired ProductEntryRecordRepository prodrRepo;
     @Autowired PaymentEntryRecordRepository payrRepo;
     @Autowired SalesOrderRecordRepository sorRepo;
@@ -55,6 +61,12 @@ public class MigrationService {
             sor.setId(null);
             sorRepo.save(sor);
 
+            for (ChargeEntryRecord chr : sor.getChargeEntryRecords()) {
+                chr.setId(null);
+                chr.setSalesOrderRecord(sor);
+                chrRepo.save(chr);
+            }
+
             for (PaymentEntryRecord payr : sor.getPaymentEntryRecords()) {
                 payr.setId(null);
                 payr.setSalesOrderRecord(sor);
@@ -71,12 +83,14 @@ public class MigrationService {
 
         // Remove Migrated Sales Orders
         for (SalesOrder so : soList) {
+            so.getChargeEntries().forEach(chRepo::delete);
             so.getProductEntries().forEach(prodRepo::delete);
             so.getPaymentEntries().forEach(payRepo::delete);
             soRepo.delete(so);
         }
 
         // Reset Sales Order Tables
+        chRepo.resetIds();
         prodRepo.resetIds();
         payRepo.resetIds();
         soRepo.resetIds();

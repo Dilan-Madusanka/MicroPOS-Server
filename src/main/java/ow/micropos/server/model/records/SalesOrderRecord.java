@@ -2,6 +2,7 @@ package ow.micropos.server.model.records;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;
+import ow.micropos.server.model.orders.ChargeEntry;
 import ow.micropos.server.model.people.Customer;
 import ow.micropos.server.model.people.Employee;
 import ow.micropos.server.model.seating.Seat;
@@ -11,6 +12,7 @@ import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.View;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +30,18 @@ public class SalesOrderRecord {
         this.date = salesOrder.getDate();
         this.type = salesOrder.getType();
         this.status = salesOrder.getStatus();
+        this.taxPercent = salesOrder.getTaxPercent();
+        this.gratuityPercent = salesOrder.getGratuityPercent();
+
+        this.chargeEntryRecords = salesOrder.getChargeEntries()
+                .stream()
+                .map(ce -> {
+                    ChargeEntryRecord cer = new ChargeEntryRecord(ce);
+                    cer.setSalesOrderRecord(this);
+                    return cer;
+                })
+                .collect(Collectors.toList());
+
         this.productEntryRecords = salesOrder.getProductEntries()
                 .stream()
                 .map(pe -> {
@@ -45,6 +59,7 @@ public class SalesOrderRecord {
                     return per;
                 })
                 .collect(Collectors.toList());
+
     }
 
     @Id
@@ -76,11 +91,21 @@ public class SalesOrderRecord {
     SalesOrderStatus status;
 
     @JsonView(View.SalesOrderRecordDetails.class)
+    BigDecimal taxPercent;
+
+    @JsonView(View.SalesOrderRecordDetails.class)
+    BigDecimal gratuityPercent;
+
+    @JsonView(View.SalesOrderRecordDetails.class)
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "salesOrderRecord")
     List<ProductEntryRecord> productEntryRecords;
 
     @JsonView(View.SalesOrderRecordDetails.class)
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "salesOrderRecord")
     List<PaymentEntryRecord> paymentEntryRecords;
+
+    @JsonView(View.SalesOrderRecordDetails.class)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "salesOrderRecord")
+    List<ChargeEntryRecord> chargeEntryRecords;
 
 }

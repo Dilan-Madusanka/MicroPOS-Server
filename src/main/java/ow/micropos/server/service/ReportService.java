@@ -3,7 +3,7 @@ package ow.micropos.server.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ow.micropos.server.model.enums.ChargeType;
+import ow.micropos.server.model.enums.*;
 import ow.micropos.server.model.menu.Modifier;
 import ow.micropos.server.model.orders.ChargeEntry;
 import ow.micropos.server.model.orders.PaymentEntry;
@@ -24,6 +24,8 @@ import java.util.List;
 
 @Service
 public class ReportService {
+
+    private static final BigDecimal ZERO_DOLLARS = new BigDecimal("0.00");
 
     @Autowired SalesOrderRecordRepository sorRepo;
     @Autowired SalesOrderRepository soRepo;
@@ -61,15 +63,43 @@ public class ReportService {
         List<SalesOrder> soList = soRepo.findAll();
         CurrentSalesReport report = new CurrentSalesReport();
 
+        report.orderCount = soList.size();
+
         for (SalesOrder so : soList) {
-            BigDecimal soProductTotal = salesOrderProductEntryTotal(so);
+            BigDecimal soProductTotal = salesOrderProductEntryTotal(so).max(ZERO_DOLLARS);
             BigDecimal soChargeTotal = salesOrderChargeTotal(so, soProductTotal);
-            BigDecimal soSubTotal = soProductTotal.add(soChargeTotal);
-            BigDecimal soTaxTotal = salesOrderTaxTotal(so, soSubTotal);
-            BigDecimal soGratuityTotal = salesOrderGratuityTotal(so, soSubTotal);
-            BigDecimal soGrandTotal = soSubTotal.add(soTaxTotal).add(soGratuityTotal);
-            BigDecimal soPaymentTotal = salesOrderPaymentTotal(so);
+            BigDecimal soSubTotal = soProductTotal.add(soChargeTotal).max(ZERO_DOLLARS);
+            BigDecimal soTaxTotal = salesOrderTaxTotal(so, soSubTotal).max(ZERO_DOLLARS);
+            BigDecimal soGratuityTotal = salesOrderGratuityTotal(so, soSubTotal).max(ZERO_DOLLARS);
+            BigDecimal soGrandTotal = soSubTotal.add(soTaxTotal).add(soGratuityTotal).max(ZERO_DOLLARS);
+            BigDecimal soPaymentTotal = salesOrderPaymentTotal(so).max(ZERO_DOLLARS);
             BigDecimal soChangeTotal = soPaymentTotal.subtract(soGrandTotal);
+
+            switch (so.getStatus()) {
+                case OPEN:
+                    report.openCount++;
+                    break;
+                case CLOSED:
+                    report.closedCount++;
+                    break;
+                case VOID:
+                    report.voidCount++;
+                    break;
+            }
+
+            switch (so.getType()) {
+                case TAKEOUT:
+                    report.takeOutCount++;
+                    break;
+                case DINEIN:
+                    report.dineInCount++;
+                    break;
+            }
+
+            so.getProductEntries()
+                    .stream()
+                    .filter(pe -> pe.hasStatus(ProductEntryStatus.VOID))
+                    .forEach(pe -> report.productVoidCount++);
 
             report.productCount += so.getProductEntries().size();
             report.chargeCount += so.getChargeEntries().size();
@@ -90,8 +120,10 @@ public class ReportService {
 
     private BigDecimal salesOrderPaymentTotal(SalesOrder so) {
         BigDecimal total = BigDecimal.ZERO;
-        for (PaymentEntry pe : so.getPaymentEntries())
-            total = total.add(pe.getAmount());
+        for (PaymentEntry pe : so.getPaymentEntries()) {
+            if (!pe.hasStatus(PaymentEntryStatus.VOID))
+                total = total.add(pe.getAmount());
+        }
         return total.setScale(2, BigDecimal.ROUND_HALF_UP);
     }
 
@@ -106,7 +138,9 @@ public class ReportService {
     private BigDecimal salesOrderChargeTotal(SalesOrder so, BigDecimal soProductTotal) {
         BigDecimal charge = BigDecimal.ZERO;
         for (ChargeEntry ce : so.getChargeEntries())
-            if (ce.hasType(ChargeType.FIXED_AMOUNT))
+            if (ce.hasStatus(ChargeEntryStatus.VOID))
+                ;// Do nothing
+            else if (ce.hasType(ChargeType.FIXED_AMOUNT))
                 charge = charge.add(ce.getCharge().getAmount());
             else if (ce.hasType(ChargeType.PERCENTAGE))
                 charge = charge.add(ce.getCharge().getAmount().multiply(soProductTotal).setScale(2, BigDecimal
@@ -115,6 +149,9 @@ public class ReportService {
     }
 
     private BigDecimal salesOrderProductEntryTotal(SalesOrder so) {
+        if (so.hasStatus(SalesOrderStatus.VOID))
+            return ZERO_DOLLARS;
+
         BigDecimal total = BigDecimal.ZERO;
         for (ProductEntry pe : so.getProductEntries())
             total = total.add(productEntryTotal(pe));
@@ -122,10 +159,13 @@ public class ReportService {
     }
 
     private BigDecimal productEntryTotal(ProductEntry pe) {
+        if (pe.hasStatus(ProductEntryStatus.VOID))
+            return ZERO_DOLLARS;
+
         BigDecimal total = pe.getMenuItem().getPrice();
         for (Modifier m : pe.getModifiers())
             total = total.add(m.getPrice());
-        return total.setScale(2, BigDecimal.ROUND_HALF_UP);
+        return total.multiply(pe.getQuantity()).setScale(2, BigDecimal.ROUND_HALF_UP).max(ZERO_DOLLARS);
     }
 
 }

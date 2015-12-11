@@ -18,13 +18,13 @@ public class MenuItem {
     @JsonView(View.MenuItem.class)
     Long id;
 
-    @JsonView(View.MenuItemAll.class)
+    @JsonView(View.MenuItemEdit.class)
     Date date;
 
-    @JsonView(View.MenuItemAll.class)
+    @JsonView(View.MenuItemEdit.class)
     boolean archived;
 
-    @JsonView(View.MenuItemAll.class)
+    @JsonView(View.MenuItemEdit.class)
     Date archiveDate;
 
     @JsonView(View.MenuItem.class)
@@ -44,7 +44,7 @@ public class MenuItem {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "menuItem")
     List<ProductEntry> productEntries;
 
-    @JsonView(View.MenuItemAll.class)
+    @JsonView(View.MenuItemEdit.class)
     @ElementCollection(fetch = FetchType.LAZY)
     List<String> printers;
 

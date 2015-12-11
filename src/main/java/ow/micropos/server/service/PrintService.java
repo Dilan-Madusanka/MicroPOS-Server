@@ -6,7 +6,7 @@ import email.com.gmail.ttsai0509.escpos.dispatcher.PrinterDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ow.micropos.server.ObjectViewMapper;
 import ow.micropos.server.model.enums.ProductEntryStatus;
@@ -20,47 +20,54 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class PrintService {
 
     private static final Logger log = LoggerFactory.getLogger(PrintService.class);
-    private static final SimpleDateFormat date = new SimpleDateFormat("MM/dd/yy hh:mm a");
 
     @Autowired ObjectViewMapper mapper;
     @Autowired MenuItemRepository miRepo;
     @Autowired PrinterDispatcher pd;
 
-    private final MicroPOSCommander cmd = new MicroPOSCommander();
+    // TODO : Fix hardcoded columns.
+    private final MicroPOSCommander cmd = new MicroPOSCommander(21);
 
+    @SuppressWarnings("Convert2streamapi")
     public boolean printOrder(SalesOrder o) {
 
         // Collect all relevant printers
         Set<String> uniquePrinters = new HashSet<>();
         for (ProductEntry pe : o.getProductEntries()) {
 
-            // Menu Items need to be reattached to the context to determine printers.
-            // Client-side sales order may not (should not) know about server printers.
-            long id = pe.getMenuItem().getId();
-            List<String> printers = miRepo.findOne(id).getPrinters();
-            uniquePrinters.addAll(printers);
+            // Only these requests get printed
+            if (pe.hasStatus(ProductEntryStatus.REQUEST_EDIT)
+                    || pe.hasStatus(ProductEntryStatus.REQUEST_SENT)
+                    || pe.hasStatus(ProductEntryStatus.REQUEST_VOID)) {
+
+                // Menu Items need to be reattached to the context to determine printers.
+                // Client-side sales order may not (should not) know about server printers.
+                long id = pe.getMenuItem().getId();
+                List<String> printers = miRepo.findOne(id).getPrinters();
+                uniquePrinters.addAll(printers);
+            }
         }
 
-        // Print the sales order to each one
-        // (filtering occurs in commander)
+        // No new requests to print
+        if (uniquePrinters.isEmpty())
+            return false;
+
+        // Print to each relevant printer
         for (String printer : uniquePrinters) {
             try {
-                cmd.reset()
-                        .salesOrder(printer, o)
-                        .print(ESCPos.ALIGN_CENTER)
-                        .print(printer)
-                        .print(ESCPos.FEED_N)
-                        .print(5)
-                        .print(ESCPos.PART_CUT);
-
-                pd.requestPrint(new PrintJob(printer, cmd.out.toByteArray()));
+                pd.requestPrint(new PrintJob(
+                        printer,
+                        cmd.begin().salesOrder(printer, o).end()
+                ));
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -72,17 +79,16 @@ public class PrintService {
 
     private class MicroPOSCommander {
 
+        private final SimpleDateFormat date = new SimpleDateFormat("MM/dd/yy hh:mm a");
+
+        private final int width;
         private final ByteArrayOutputStream out;
         private final ESCPos.Commander commander;
 
-        public MicroPOSCommander() {
+        public MicroPOSCommander(int width) {
+            this.width = width;
             this.out = new ByteArrayOutputStream();
             this.commander = new ESCPos.Commander(out);
-        }
-
-        public MicroPOSCommander reset() {
-            out.reset();
-            return this;
         }
 
         public MicroPOSCommander print(int val) throws IOException {
@@ -100,45 +106,21 @@ public class PrintService {
             return this;
         }
 
-        public MicroPOSCommander datetime() throws IOException {
-            commander.datetime();
-            return this;
+        public MicroPOSCommander begin() throws IOException {
+            out.reset();
+            return print(ESCPos.INITIALIZE);
         }
 
-        public MicroPOSCommander date() throws IOException {
-            commander.date();
-            return this;
-        }
+        public byte[] end() throws IOException {
 
-        public MicroPOSCommander time() throws IOException {
-            commander.time();
-            return this;
-        }
+            print(ESCPos.FEED_N)
+                    .print(4)
+                    .print(ESCPos.PART_CUT);
 
-        public MicroPOSCommander header() throws IOException {
-            commander
-                    .print("ORIENTAL WOK")
-                    .print(ESCPos.FEED_N)
-                    .print(2)
-                    .print(ESCPos.FONT_REG)
-                    .print("6 NORTH BOLTON AVE.")
-                    .print(ESCPos.FEED)
-                    .print("ALEXANDRIA, LA 71301")
-                    .print(ESCPos.FEED)
-                    .print("(318) 448-8247")
-                    .print(ESCPos.FEED_N)
-                    .print(2);
-            return this;
-        }
+            byte[] result = out.toByteArray();
+            out.reset();
 
-        public MicroPOSCommander footer() throws IOException {
-            commander
-                    .print(ESCPos.FEED_N)
-                    .print(2)
-                    .print(Long.toString(new Date().getTime()))
-                    .print(ESCPos.FEED_N)
-                    .print(2);
-            return this;
+            return result;
         }
 
         public MicroPOSCommander salesOrder(String printer, SalesOrder so) throws IOException {
@@ -154,8 +136,7 @@ public class PrintService {
                     .collect(Collectors.toList());
 
             if (!toPrint.isEmpty()) {
-                print(ESCPos.INITIALIZE)
-                        .print(ESCPos.ALIGN_CENTER)
+                print(ESCPos.ALIGN_CENTER)
                         .print(ESCPos.FONT_DWDH_EMPH)
                         .print("Order #" + so.getId())
                         .print(ESCPos.FEED_N)
@@ -176,31 +157,36 @@ public class PrintService {
                     productEntry(pe);
             }
 
-            return this;
+            return print(ESCPos.FEED_N).print(2);
 
         }
 
         private MicroPOSCommander productEntry(ProductEntry pe) throws IOException {
+
+            String mainLine = "";
+
             switch (pe.getStatus()) {
                 case REQUEST_SENT:
-                    print("  ");
+                    mainLine += "   ";
                     break;
                 case REQUEST_VOID:
-                    print("*V");
+                    mainLine += "*V ";
                     break;
                 case REQUEST_EDIT:
-                    print("*E");
+                    mainLine += "*E ";
                     break;
                 default:
                     log.warn("Unexpected Product Entry " + pe.toString());
                     return this;
             }
 
-            print(pe.getQuantity().setScale(0, BigDecimal.ROUND_FLOOR).toString())
-                    .print(" ")
-                    .print(pe.getMenuItem().getTag())
-                    .print(" ")
-                    .print(pe.getMenuItem().getName())
+            mainLine += pe.getQuantity().setScale(0, BigDecimal.ROUND_FLOOR).toString();
+            mainLine += " ";
+            mainLine += pe.getMenuItem().getTag();
+            mainLine += " ";
+            mainLine += pe.getMenuItem().getName();
+
+            print(mainLine.substring(0, Math.min(width, mainLine.length())))
                     .print(ESCPos.FEED);
 
             for (Modifier mod : pe.getModifiers())
@@ -210,7 +196,9 @@ public class PrintService {
         }
 
         private MicroPOSCommander modifier(Modifier mod) throws IOException {
-            return print("      ").print(mod.getName());
+            String mainline = "      " + mod.getTag() + " " + mod.getName();
+            return print(mainline.substring(0, Math.min(width, mainline.length())))
+                    .print(ESCPos.FEED);
         }
 
     }

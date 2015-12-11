@@ -118,8 +118,11 @@ public class OrderService {
         // Persistence
         saveSalesOrder(currOrder);
 
+        // Printing
+        printService.printOrder(currOrder);
+
         // Processing
-        processOrder(currOrder);
+        transitionOrder(currOrder);
 
         // Update Customer Previous Order
         if (currOrder.hasType(SalesOrderType.TAKEOUT) && currOrder.getCustomer() != null) {
@@ -134,26 +137,30 @@ public class OrderService {
 
     /******************************************************************
      *                                                                *
-     * Processing Methods                                             *
+     * Transitioning Methods                                          *
      *                                                                *
-     * Use processOrder(SalesOrder). The rest are helper methods.     *
+     * Use transitionOrder(SalesOrder). The rest are helper methods.  *
      *                                                                *
-     * Prints and performs the actual state transition.               *
+     * Performs the actual state transition.                          *
      *                                                                *
      ******************************************************************/
 
-    private void processOrder(SalesOrder order) {
+    private void transitionOrder(SalesOrder order) {
 
-        _processSalesOrder(order);
+        _transitionSalesOrder(order);
+
+        order.getPaymentEntries()
+                .forEach(this::_transitionPaymentEntry);
 
         order.getProductEntries()
-                .forEach(this::_processProductEntry);
+                .forEach(this::_transitionProductEntry);
+
+        order.getChargeEntries()
+                .forEach(this::_transitionChargeEntry);
 
     }
 
-    private void _processSalesOrder(SalesOrder item) {
-
-        printService.printOrder(item);
+    private void _transitionSalesOrder(SalesOrder item) {
 
         String text = mapper.asString(item, View.SalesOrder.class);
 
@@ -183,7 +190,7 @@ public class OrderService {
 
     }
 
-    private void _processProductEntry(ProductEntry item) {
+    private void _transitionProductEntry(ProductEntry item) {
 
         String text = mapper.asString(item, View.ProductEntry.class);
 
@@ -216,6 +223,53 @@ public class OrderService {
             default:
                 log.debug("\tSkipped\t" + text);
         }
+    }
+
+    private void _transitionPaymentEntry(PaymentEntry item) {
+
+        String text = mapper.asString(item, View.PaymentEntry.class);
+
+        switch (item.getStatus()) {
+
+            case REQUEST_PAID:
+                log.debug("\tPaying\t" + text);
+                item.setStatus(PaymentEntryStatus.PAID);
+                payRepo.save(item);
+                break;
+
+            case REQUEST_VOID:
+                log.debug("\tVoiding\t" + text);
+                item.setStatus(PaymentEntryStatus.VOID);
+                payRepo.save(item);
+                break;
+
+            default:
+                log.debug("\tSkipped\t" + text);
+        }
+    }
+
+    private void _transitionChargeEntry(ChargeEntry item) {
+
+        String text = mapper.asString(item, View.ChargeEntry.class);
+
+        switch (item.getStatus()) {
+
+            case REQUEST_APPLY:
+                log.debug("\tApplying\t" + text);
+                item.setStatus(ChargeEntryStatus.APPLIED);
+                chargeRepo.save(item);
+                break;
+
+            case REQUEST_VOID:
+                log.debug("\tVoiding\t" + text);
+                item.setStatus(ChargeEntryStatus.VOID);
+                chargeRepo.save(item);
+                break;
+
+            default:
+                log.debug("\tSkipped\t" + text);
+        }
+
     }
 
     /******************************************************************
@@ -445,8 +499,7 @@ public class OrderService {
         List<Long> currChargeIds = currSO.getChargeEntries().stream().map(ChargeEntry::getId).collect(Collectors
                 .toList());
 
-        return prevSO.getStatus() != currSO.getStatus()
-                || prevSO.getType() != currSO.getType()
+        return prevSO.getType() != currSO.getType()
                 || !Objects.equals(prevSO.getId(), currSO.getId())
                 || prevSO.getTaxPercent().compareTo(currSO.getTaxPercent()) != 0
                 || prevSO.getGratuityPercent().compareTo(currSO.getGratuityPercent()) != 0
