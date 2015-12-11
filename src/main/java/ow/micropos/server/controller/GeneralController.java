@@ -28,7 +28,6 @@ public class GeneralController {
 
     @Autowired AuthService authService;
     @Autowired GeneralService genService;
-    @Autowired OrderService oService;
 
     /******************************************************************
      *                                                                *
@@ -164,96 +163,5 @@ public class GeneralController {
         return genService.getModifierGroups();
 
     }
-
-    /******************************************************************
-     *                                                                *
-     * Order Requests
-     *                                                                *
-     ******************************************************************/
-
-    @JsonView(value = View.SalesOrderAll.class)
-    @RequestMapping(value = "/orders", method = RequestMethod.GET)
-    public List<SalesOrder> getSalesOrders(
-            HttpServletRequest request,
-            @RequestParam(value = "status", required = false) SalesOrderStatus status,
-            @RequestParam(value = "type", required = false) SalesOrderType type
-    ) {
-
-        Employee employee = authService.authorize(request, Permission.GET_SALES_ORDERS);
-
-        /*
-        TODO : Customize results based on permissions.
-
-        boolean canTakeOut = employee.hasPermission(Permission.GET_TAKE_OUT_SALES_ORDERS);
-        boolean canDineIn = employee.hasPermission(Permission.GET_DINE_IN_SALES_ORDERS);
-
-        if (type == SalesOrderType.DINEIN)
-        */
-
-        return oService.findSalesOrders(status, type);
-
-    }
-
-    @JsonView(value = View.SalesOrderAll.class)
-    @RequestMapping(value = "/orders/seat", method = RequestMethod.GET)
-    public List<SalesOrder> getSalesOrdersBySeat(
-            HttpServletRequest request,
-            @RequestParam(value = "id", required = true) long id,
-            @RequestParam(value = "status", required = false) SalesOrderStatus status
-    ) {
-
-        authService.authorize(request, Permission.GET_DINE_IN_SALES_ORDERS);
-
-        return oService.findSalesOrdersBySeat(id, status);
-
-    }
-
-    @JsonView(value = View.SalesOrderAll.class)
-    @RequestMapping(value = "/orders/section", method = RequestMethod.GET)
-    public List<SalesOrder> getSalesOrderByCustomer(
-            HttpServletRequest request,
-            @RequestParam(value = "id", required = true) long id,
-            @RequestParam(value = "status", required = false) SalesOrderStatus status
-    ) {
-
-        authService.authorize(request, Permission.GET_TAKE_OUT_SALES_ORDERS);
-
-        return oService.findSalesOrdersByCustomer(id, status);
-
-    }
-
-    @RequestMapping(value = "/orders", method = RequestMethod.POST)
-    public long postSalesOrder(
-            HttpServletRequest request,
-            @RequestBody(required = true) SalesOrder salesOrder
-    ) {
-
-        Employee employee = authService.authorize(request);
-
-        if (!employee.isOwnerOf(salesOrder))
-            authService.authorize(employee, Permission.ACCESS_ALL_EMPLOYEE_ORDER);
-
-        return oService.processOrder(employee, salesOrder);
-
-    }
-
-    @RequestMapping(value = "/orders/batch", method = RequestMethod.POST)
-    public List<Long> postSalesOrders(
-            HttpServletRequest request,
-            @RequestBody(required = true) List<SalesOrder> salesOrders
-    ) {
-
-        Employee employee = authService.authorize(request);
-
-        if (!employee.isOwnerOf(salesOrders))
-            authService.authorize(employee, Permission.ACCESS_ALL_EMPLOYEE_ORDER);
-
-        return salesOrders
-                .stream()
-                .map(salesOrder -> oService.processOrder(employee, salesOrder))
-                .collect(Collectors.toList());
-
-    }
-
 
 }
