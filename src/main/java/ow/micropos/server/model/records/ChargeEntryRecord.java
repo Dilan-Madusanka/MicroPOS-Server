@@ -3,7 +3,7 @@ package ow.micropos.server.model.records;
 import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;
 import ow.micropos.server.model.View;
-import ow.micropos.server.model.charge.Charge;
+import ow.micropos.server.model.menu.Charge;
 import ow.micropos.server.model.enums.ChargeEntryStatus;
 import ow.micropos.server.model.orders.ChargeEntry;
 

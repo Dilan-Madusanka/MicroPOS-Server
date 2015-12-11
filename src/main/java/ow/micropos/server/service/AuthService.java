@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ow.micropos.server.exception.UserPermissionException;
 import ow.micropos.server.model.Permission;
-import ow.micropos.server.model.people.Employee;
+import ow.micropos.server.model.employee.Employee;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
@@ -13,7 +13,7 @@ import java.util.Arrays;
 @Service
 public class AuthService {
 
-    @Autowired PeopleService eService;
+    @Autowired GeneralService generalService;
 
     public static final String HEADER = "MicroPOS-Pin";
 
@@ -44,7 +44,7 @@ public class AuthService {
             pin = 0;
         }
 
-        Employee employee = eService.getEmployee(pin);
+        Employee employee = generalService.getEmployee(pin);
         authorize(employee, permissions);
         return employee;
 

@@ -15,14 +15,14 @@ import ow.micropos.server.model.orders.ChargeEntry;
 import ow.micropos.server.model.orders.PaymentEntry;
 import ow.micropos.server.model.orders.ProductEntry;
 import ow.micropos.server.model.orders.SalesOrder;
-import ow.micropos.server.model.people.Customer;
-import ow.micropos.server.model.people.Employee;
+import ow.micropos.server.model.target.Customer;
+import ow.micropos.server.model.employee.Employee;
 import ow.micropos.server.repository.orders.ChargeEntryRepository;
 import ow.micropos.server.repository.orders.PaymentEntryRepository;
 import ow.micropos.server.repository.orders.ProductEntryRepository;
 import ow.micropos.server.repository.orders.SalesOrderRepository;
-import ow.micropos.server.repository.people.CustomerRepository;
-import ow.micropos.server.repository.seating.SeatRepository;
+import ow.micropos.server.repository.target.CustomerRepository;
+import ow.micropos.server.repository.target.SeatRepository;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;

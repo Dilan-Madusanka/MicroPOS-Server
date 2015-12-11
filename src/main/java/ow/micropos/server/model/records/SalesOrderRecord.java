@@ -2,10 +2,9 @@ package ow.micropos.server.model.records;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;
-import ow.micropos.server.model.orders.ChargeEntry;
-import ow.micropos.server.model.people.Customer;
-import ow.micropos.server.model.people.Employee;
-import ow.micropos.server.model.seating.Seat;
+import ow.micropos.server.model.target.Customer;
+import ow.micropos.server.model.employee.Employee;
+import ow.micropos.server.model.target.Seat;
 import ow.micropos.server.model.enums.SalesOrderStatus;
 import ow.micropos.server.model.enums.SalesOrderType;
 import ow.micropos.server.model.orders.SalesOrder;

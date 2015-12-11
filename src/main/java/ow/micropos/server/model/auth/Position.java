@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;
 import ow.micropos.server.model.Permission;
 import ow.micropos.server.model.View;
-import ow.micropos.server.model.people.Employee;
+import ow.micropos.server.model.employee.Employee;
 
 import javax.persistence.*;
 import java.util.List;

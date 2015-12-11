@@ -6,16 +6,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ow.micropos.server.model.Permission;
 import ow.micropos.server.model.View;
-import ow.micropos.server.model.charge.Charge;
+import ow.micropos.server.model.menu.Charge;
 import ow.micropos.server.model.enums.SalesOrderStatus;
 import ow.micropos.server.model.enums.SalesOrderType;
 import ow.micropos.server.model.menu.Category;
 import ow.micropos.server.model.menu.ModifierGroup;
 import ow.micropos.server.model.orders.SalesOrder;
-import ow.micropos.server.model.people.Customer;
-import ow.micropos.server.model.people.Employee;
-import ow.micropos.server.model.seating.Section;
-import ow.micropos.server.service.*;
+import ow.micropos.server.model.target.Customer;
+import ow.micropos.server.model.employee.Employee;
+import ow.micropos.server.model.target.Section;
+import ow.micropos.server.service.AuthService;
+import ow.micropos.server.service.GeneralService;
+import ow.micropos.server.service.OrderService;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -25,10 +27,7 @@ import java.util.stream.Collectors;
 public class GeneralController {
 
     @Autowired AuthService authService;
-    @Autowired ChargeService cService;
-    @Autowired MenuService menuService;
-    @Autowired PeopleService pService;
-    @Autowired SeatingService sService;
+    @Autowired GeneralService genService;
     @Autowired OrderService oService;
 
     /******************************************************************
@@ -46,7 +45,7 @@ public class GeneralController {
 
         //authService.authorize(request);
 
-        return pService.getEmployee(pin);
+        return genService.getEmployee(pin);
 
     }
 
@@ -64,7 +63,7 @@ public class GeneralController {
 
         authService.authorize(request, Permission.GET_SECTIONS);
 
-        return sService.getSections(true, true);
+        return genService.getSections(true, true);
 
     }
 
@@ -77,7 +76,7 @@ public class GeneralController {
 
         authService.authorize(request, Permission.GET_SECTIONS);
 
-        return sService.getSection(id, true, true);
+        return genService.getSection(id, true, true);
 
     }
 
@@ -95,7 +94,7 @@ public class GeneralController {
 
         authService.authorize(request, Permission.GET_CUSTOMERS);
 
-        return pService.getCustomers(true, true);
+        return genService.getCustomers(true, true);
 
     }
 
@@ -108,7 +107,7 @@ public class GeneralController {
 
         authService.authorize(request, Permission.GET_CUSTOMERS);
 
-        return pService.getCustomer(id, true, true);
+        return genService.getCustomer(id, true, true);
 
     }
 
@@ -120,7 +119,7 @@ public class GeneralController {
 
         authService.authorize(request, Permission.POST_CUSTOMER);
 
-        return pService.postCustomer(customer);
+        return genService.postCustomer(customer);
 
     }
 
@@ -138,7 +137,7 @@ public class GeneralController {
 
         authService.authorize(request, Permission.GET_CHARGES);
 
-        return cService.getCharges();
+        return genService.getCharges();
 
     }
 
@@ -150,7 +149,7 @@ public class GeneralController {
 
         authService.authorize(request, Permission.GET_MENU);
 
-        return menuService.getCategories();
+        return genService.getCategories();
 
     }
 
@@ -162,7 +161,7 @@ public class GeneralController {
 
         authService.authorize(request, Permission.GET_MENU);
 
-        return menuService.getModifierGroups();
+        return genService.getModifierGroups();
 
     }
 

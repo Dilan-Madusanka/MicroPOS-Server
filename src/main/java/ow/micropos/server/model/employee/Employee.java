@@ -1,4 +1,4 @@
-package ow.micropos.server.model.people;
+package ow.micropos.server.model.employee;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;

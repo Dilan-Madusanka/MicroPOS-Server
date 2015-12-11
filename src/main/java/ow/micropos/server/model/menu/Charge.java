@@ -1,4 +1,4 @@
-package ow.micropos.server.model.charge;
+package ow.micropos.server.model.menu;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;
