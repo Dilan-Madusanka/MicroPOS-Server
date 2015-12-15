@@ -20,6 +20,12 @@ public class Section {
     @JsonView(View.SectionAll.class)
     Date date;
 
+    @JsonView(View.SectionAll.class)
+    boolean archived;
+
+    @JsonView(View.SectionAll.class)
+    Date archiveDate;
+
     @JsonView(View.Section.class)
     String name;
 

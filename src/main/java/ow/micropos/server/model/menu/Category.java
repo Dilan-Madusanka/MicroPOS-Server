@@ -20,6 +20,12 @@ public class Category {
     @JsonView(View.CategoryAll.class)
     Date date;
 
+    @JsonView(View.CategoryAll.class)
+    boolean archived;
+
+    @JsonView(View.CategoryAll.class)
+    Date archiveDate;
+
     @JsonView(View.Category.class)
     String name;
 

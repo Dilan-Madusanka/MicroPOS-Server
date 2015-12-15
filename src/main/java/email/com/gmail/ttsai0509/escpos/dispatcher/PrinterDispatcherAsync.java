@@ -52,13 +52,13 @@ public class PrinterDispatcherAsync implements PrinterDispatcher {
     @Override
     public void registerPrinter(Printer printer) {
         log.debug("Registering printer " + printer.toString());
-        printerMap.put(printer.getId(), printer);
+        printerMap.put(printer.getId().toLowerCase(), printer);
     }
 
     @Override
     public void unregisterPrinter(Printer printer) {
         log.debug("Unregister printer " + printer.toString());
-        printerMap.remove(printer.getId());
+        printerMap.remove(printer.getId().toLowerCase());
     }
 
     @Override
@@ -73,7 +73,7 @@ public class PrinterDispatcherAsync implements PrinterDispatcher {
 
             jobRequest.incrementAndGet();
 
-            if (!printerMap.containsKey(job.getTarget())) {
+            if (!printerMap.containsKey(job.getTarget().toLowerCase())) {
                 jobRequestFail.incrementAndGet();
                 return false;
             }
@@ -107,19 +107,18 @@ public class PrinterDispatcherAsync implements PrinterDispatcher {
 
             try {
                 PrintJob job = printJobs.take();
+                Printer printer = printerMap.get(job.getTarget().toLowerCase());
 
                 jobProcess.incrementAndGet();
 
-                if (!printerMap.containsKey(job.getTarget())) {
+                if (printer == null) {
 
                     jobProcessFail.incrementAndGet();
 
                 } else {
 
                     try {
-                        printerMap
-                                .get(job.getTarget())
-                                .print(job.getJob());
+                        printer.print(job.getJob());
                         jobProcessPass.incrementAndGet();
                     } catch (IOException e) {
                         jobProcessFail.incrementAndGet();

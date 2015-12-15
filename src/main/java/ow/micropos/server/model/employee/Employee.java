@@ -31,13 +31,13 @@ public class Employee {
     Date archiveDate;
 
     @JsonView(View.Employee.class)
+    String pin;
+
+    @JsonView(View.Employee.class)
     String firstName;
 
     @JsonView(View.Employee.class)
     String lastName;
-
-    @JsonView(View.Employee.class)
-    Short pin;
 
     @JsonView(View.EmployeeWithSalesOrder.class)
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "employee")

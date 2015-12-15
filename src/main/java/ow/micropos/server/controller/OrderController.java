@@ -61,7 +61,7 @@ public class OrderController {
     }
 
     @JsonView(value = View.SalesOrderAll.class)
-    @RequestMapping(value = "/section", method = RequestMethod.GET)
+    @RequestMapping(value = "/customer", method = RequestMethod.GET)
     public List<SalesOrder> getSalesOrderByCustomer(
             HttpServletRequest request,
             @RequestParam(value = "id", required = true) long id,

@@ -35,13 +35,13 @@ public class AuthService {
     @Transactional(readOnly = true)
     public Employee authorize(HttpServletRequest request, Permission... permissions) {
 
-        short pin;
+        String pin;
 
         try {
-            pin = Short.parseShort(request.getHeader(HEADER));
+            pin = request.getHeader(HEADER);
         } catch (Exception e) {
             System.out.println("Defaulting to Guest");
-            pin = 0;
+            pin = "0";
         }
 
         Employee employee = generalService.getEmployee(pin);

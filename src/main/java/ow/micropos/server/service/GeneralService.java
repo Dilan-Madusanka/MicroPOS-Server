@@ -45,7 +45,7 @@ public class GeneralService {
      ******************************************************************/
 
     @Transactional(readOnly = true)
-    public Employee getEmployee(short pin) {
+    public Employee getEmployee(String pin) {
 
         List<Employee> employees = employeeRepo.findByPin(pin);
 

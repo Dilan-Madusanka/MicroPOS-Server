@@ -26,6 +26,12 @@ public class ModifierGroup {
     @JsonView(View.ModifierGroup.class)
     String tag;
 
+    @JsonView(View.ModifierGroupAll.class)
+    boolean archived;
+
+    @JsonView(View.ModifierGroupAll.class)
+    Date archiveDate;
+
     @JsonView(View.ModifierGroupWithModifier.class)
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "modifierGroup")
     List<Modifier> modifiers;

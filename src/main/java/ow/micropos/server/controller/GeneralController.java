@@ -39,7 +39,7 @@ public class GeneralController {
     @RequestMapping(value = "/employees", method = RequestMethod.GET)
     public Employee getEmployee(
             HttpServletRequest request,
-            @RequestParam(value = "pin", required = true) short pin
+            @RequestParam(value = "pin", required = true) String pin
     ) {
 
         //authService.authorize(request);

@@ -20,8 +20,7 @@ public final class View {
     public interface MenuItem {}
     public interface MenuItemWithCategory extends MenuItem, Category {}
     public interface MenuItemWithSalesOrder extends MenuItem, SalesOrder {}
-    public interface MenuItemEdit extends MenuItem, MenuItemWithCategory {}
-    public interface MenuItemAll extends MenuItem, MenuItemWithCategory, MenuItemWithSalesOrder, MenuItemEdit {}
+    public interface MenuItemAll extends MenuItem, MenuItemWithCategory, MenuItemWithSalesOrder {}
 
     public interface Modifier {}
     public interface ModifierWithModifierGroup extends Modifier, ModifierGroup {}

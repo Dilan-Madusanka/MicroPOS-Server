@@ -17,6 +17,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     List<Employee> findByArchived(boolean archived);
 
-    List<Employee> findByPin(short pin);
+    List<Employee> findByPin(String pin);
 
 }
