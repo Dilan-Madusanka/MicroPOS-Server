@@ -2,18 +2,18 @@ package ow.micropos.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import email.com.gmail.ttsai0509.escpos.ESCPos;
-import email.com.gmail.ttsai0509.escpos.dispatcher.PrinterDispatcher;
-import email.com.gmail.ttsai0509.escpos.dispatcher.PrinterDispatcherAsync;
-import email.com.gmail.ttsai0509.escpos.printer.RawPrinter;
-import email.com.gmail.ttsai0509.escpos.printer.TextPrinter;
+import email.com.gmail.ttsai0509.escpos.com.ComUtils;
+import email.com.gmail.ttsai0509.print.dispatcher.PrinterDispatcher;
+import email.com.gmail.ttsai0509.print.dispatcher.PrinterDispatcherAsync;
+import email.com.gmail.ttsai0509.print.printer.RawPrinter;
 import email.com.gmail.ttsai0509.utils.LoggerOutputStream;
 import email.com.gmail.ttsai0509.utils.NullOutputStream;
+import email.com.gmail.ttsai0509.utils.PrinterConfig;
+import email.com.gmail.ttsai0509.utils.TypedProperties;
 import gnu.io.SerialPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.ApplicationContext;
@@ -21,33 +21,28 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import ow.micropos.server.custom.WokPrintJobBuilder;
 import ow.micropos.server.model.auth.Position;
-import ow.micropos.server.model.menu.Charge;
-import ow.micropos.server.model.menu.Category;
-import ow.micropos.server.model.menu.MenuItem;
-import ow.micropos.server.model.menu.Modifier;
-import ow.micropos.server.model.menu.ModifierGroup;
-import ow.micropos.server.model.target.Customer;
 import ow.micropos.server.model.employee.Employee;
+import ow.micropos.server.model.menu.*;
+import ow.micropos.server.model.target.Customer;
 import ow.micropos.server.model.target.Seat;
 import ow.micropos.server.model.target.Section;
 import ow.micropos.server.repository.auth.PositionRepository;
-import ow.micropos.server.repository.menu.ChargeRepository;
-import ow.micropos.server.repository.menu.CategoryRepository;
-import ow.micropos.server.repository.menu.MenuItemRepository;
-import ow.micropos.server.repository.menu.ModifierGroupRepository;
-import ow.micropos.server.repository.menu.ModifierRepository;
-import ow.micropos.server.repository.target.CustomerRepository;
 import ow.micropos.server.repository.employee.EmployeeRepository;
+import ow.micropos.server.repository.menu.*;
+import ow.micropos.server.repository.target.CustomerRepository;
 import ow.micropos.server.repository.target.SeatRepository;
 import ow.micropos.server.repository.target.SectionRepository;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,58 +62,97 @@ public class Application {
     private static final Logger log = LoggerFactory.getLogger(Application.class);
 
     @Bean
-    @Value("${micropos.printers}")
-    PrinterDispatcher printerDispatcher(String microposPrinters) {
+    PrinterDispatcher printerDispatcher() throws IOException {
 
-        PrinterDispatcher pd = new PrinterDispatcherAsync();
+        PrinterDispatcher dispatcher = new PrinterDispatcherAsync();
 
-        String[] printerConfigs = microposPrinters.split(":");
+        TypedProperties properties = new TypedProperties(new FileSystemResource("printer.properties").getInputStream());
 
-        Map<String, OutputStream> deviceMap = new HashMap<>();
-        deviceMap.put("CLI", System.out);
-        deviceMap.put("LOG", new LoggerOutputStream(PrinterDispatcher.class, LoggerOutputStream.Level.INFO));
-        deviceMap.put("NULL", new NullOutputStream());
+        // Get Printer Configurations (See printer.properties for proper format)
+        int count = properties.getInt("printers");
+        PrinterConfig[] printerConfigs = new PrinterConfig[count];
+        for (int i = 0; i < count; i++)
+            printerConfigs[i] = PrinterConfig.fromProperties(properties, "printer" + i);
 
-        for (String printerConfig : printerConfigs) {
+        new Thread(() -> {
 
-            String[] config = printerConfig.split(",");
-            if (config.length < 2) {
-                log.warn("Printer config missing parameters : " + printerConfig);
-                continue;
-            }
+            Map<String, OutputStream> deviceMap = new HashMap<>();
 
-            String printerName = config[0];
-            String printerDevice = config[1];
+            // Load default devices
+            deviceMap.put("CLI", System.out);
+            deviceMap.put("LOG", new LoggerOutputStream(PrinterDispatcher.class, LoggerOutputStream.Level.INFO));
+            deviceMap.put("NULL", new NullOutputStream());
 
-            if (!deviceMap.containsKey(printerDevice)) {
-                try {
-                    SerialPort sp = ESCPos.connectSerialPort(printerDevice);
-                    deviceMap.put(printerDevice, sp.getOutputStream());
-                } catch (Error e) {
-                    log.error("Unable to load serial drivers. " + printerName + " using LOG instead.");
-                    printerDevice = "LOG";
-                } catch (Exception e) {
-                    log.warn("Unable to open serial port " + printerDevice + ". " + printerName + " using LOG instead");
-                    printerDevice = "LOG";
+            // Load config devices
+            for (PrinterConfig printerConfig : printerConfigs) {
+
+                // Open SerialPort if it's not opened yet, and we are able to.
+                if (!deviceMap.containsKey(printerConfig.device) && printerConfig.serialConfig != null) {
+                    try {
+                        SerialPort sp = ComUtils.connectSerialPort(printerConfig.device, 2000, printerConfig
+                                .serialConfig);
+                        deviceMap.put(printerConfig.device, sp.getOutputStream());
+
+                    } catch (Error e) {
+                        log.error("Check serial drivers. " + printerConfig.name + " using LOG.");
+
+                    } catch (Exception e) {
+                        log.warn("Check serial port " + printerConfig.device + ". " + printerConfig.name + " using " +
+                                "LOG");
+
+                    }
                 }
+
+                OutputStream device = deviceMap.get(printerConfig.device);
+
+                // Device issues default to the Logger
+                if (device == null)
+                    dispatcher.registerPrinter(printerConfig.name, new RawPrinter(deviceMap.get("LOG")));
+                else
+                    dispatcher.registerPrinter(printerConfig.name, new RawPrinter(device));
+
             }
 
-            if (printerDevice.equals("CLI"))
-                pd.registerPrinter(new TextPrinter(printerName, new PrintStream(deviceMap.get(printerDevice))));
-            else
-                pd.registerPrinter(new RawPrinter(printerName, deviceMap.get(printerDevice)));
+            // Dispatcher runs on same thread as opened OutputStreams
+            dispatcher.run();
 
-        }
+        }).start();
 
-        new Thread(pd).start();
+        return dispatcher;
 
-        return pd;
+    }
+
+    @Bean
+    WokPrintJobBuilder printJobBuilder() {
+        return new WokPrintJobBuilder(21);
     }
 
     public static void main(String[] args) {
         ConfigurableApplicationContext context = SpringApplication.run(Application.class);
         context.getBean(Application.class).reset();
+        context.getBean(Application.class).printHost();
+    }
 
+    /******************************************************************
+     *                                                                *
+     * Host Information                                               *
+     *                                                                *
+     ******************************************************************/
+
+    private void printHost() {
+        String hostAddr;
+        String hostName;
+
+        try {
+            hostAddr = InetAddress.getLocalHost().getHostAddress();
+            hostName = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            hostAddr = "UNKNOWN";
+            hostName = "UNKNOWN";
+        }
+
+        log.info("MicroPOS Server Host Address : " + hostAddr);
+        log.info("MicroPOS Server Host Name    : " + hostName);
     }
 
     /******************************************************************

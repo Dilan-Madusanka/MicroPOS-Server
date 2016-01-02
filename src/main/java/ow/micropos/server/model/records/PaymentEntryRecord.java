@@ -47,4 +47,12 @@ public class PaymentEntryRecord {
     @ManyToOne(fetch = FetchType.LAZY)
     SalesOrderRecord salesOrderRecord;
 
+    public boolean hasStatus(PaymentEntryStatus status) {
+        return getStatus() == status;
+    }
+
+    public boolean hasType(PaymentEntryType type) {
+        return getType() == type;
+    }
+
 }

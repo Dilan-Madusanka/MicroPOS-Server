@@ -27,6 +27,9 @@ public class Section {
     Date archiveDate;
 
     @JsonView(View.Section.class)
+    int weight;
+
+    @JsonView(View.Section.class)
     String name;
 
     @JsonView(View.Section.class)

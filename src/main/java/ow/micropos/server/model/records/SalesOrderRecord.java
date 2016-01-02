@@ -107,4 +107,15 @@ public class SalesOrderRecord {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "salesOrderRecord")
     List<ChargeEntryRecord> chargeEntryRecords;
 
+    public boolean hasStatus(SalesOrderStatus status) {
+        return getStatus() == status;
+    }
+
+    public boolean hasType(SalesOrderType type) {
+        return getType() == type;
+    }
+
+    public boolean hasGratuity() {
+        return getGratuityPercent() != null && getGratuityPercent().compareTo(BigDecimal.ZERO) != 0;
+    }
 }

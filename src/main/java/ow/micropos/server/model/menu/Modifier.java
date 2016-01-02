@@ -30,6 +30,9 @@ public class Modifier {
     Date archiveDate;
 
     @JsonView(View.Modifier.class)
+    int weight;
+
+    @JsonView(View.Modifier.class)
     String name;
 
     @JsonView(View.Modifier.class)

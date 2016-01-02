@@ -25,7 +25,7 @@ public class SettingsController {
             @RequestParam(value = "keys", required = true) String[] keys
     ) {
 
-        authService.authorize(request, Permission.READ_SETTINGS);
+        authService.authorize(request, Permission.CLIENT_SETTINGS);
 
         return sService.getSettings(keys);
 
@@ -38,7 +38,7 @@ public class SettingsController {
             @RequestParam(value = "val", required = true) String val
     ) {
 
-        authService.authorize(request, Permission.WRITE_SETTINGS);
+        authService.authorize(request, Permission.CLIENT_SETTINGS);
 
         sService.putSetting(key, val);
 

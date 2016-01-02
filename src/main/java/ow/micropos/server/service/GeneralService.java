@@ -213,7 +213,7 @@ public class GeneralService {
     @Transactional(readOnly = true)
     public List<Category> getCategories() {
 
-        List<Category> categories = categoryRepo.findAll();
+        List<Category> categories = categoryRepo.findByArchived(false);
         if (categories == null)
             throw new InternalServerErrorException("Error retrieving categories.");
 
@@ -226,7 +226,7 @@ public class GeneralService {
     @Transactional(readOnly = true)
     public List<ModifierGroup> getModifierGroups() {
 
-        List<ModifierGroup> modifierGroups = mgRepo.findAll();
+        List<ModifierGroup> modifierGroups = mgRepo.findByArchived(false);
         if (modifierGroups == null)
             throw new InternalServerErrorException("Error retrieving modifier groups.");
 

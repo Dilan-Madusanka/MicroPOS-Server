@@ -5,8 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ow.micropos.server.exception.InternalServerErrorException;
 import ow.micropos.server.exception.NoSalesOrdersException;
-import ow.micropos.server.exception.UnpaidOrdersException;
-import ow.micropos.server.model.View;
+import ow.micropos.server.exception.UnexpectedOrderRequestException;
 import ow.micropos.server.model.enums.SalesOrderStatus;
 import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.records.ChargeEntryRecord;
@@ -49,8 +48,10 @@ public class MigrationService {
             throw new NoSalesOrdersException("No sales orders to migrate.");
 
         for (SalesOrder so : soList) {
-            if (so.getStatus() == SalesOrderStatus.OPEN)
-                throw new UnpaidOrdersException();
+            if (so.hasStatus(SalesOrderStatus.REQUEST_OPEN)
+                    || so.hasStatus(SalesOrderStatus.REQUEST_CLOSE)
+                    || so.hasStatus(SalesOrderStatus.REQUEST_VOID))
+                throw new UnexpectedOrderRequestException(so.getId());
         }
 
         List<SalesOrderRecord> sorList = soList.stream().map(SalesOrderRecord::new).collect(Collectors.toList());

@@ -23,6 +23,3 @@ logging:
 
   level:
     org.springframework: INFO
-
-micropos:
-  printers: Sushi,CLI:DeepFryer,CLI:Cook,CLI:Togo,CLI

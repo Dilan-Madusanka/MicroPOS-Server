@@ -54,4 +54,8 @@ public class ProductEntryRecord {
     @ManyToOne(fetch = FetchType.LAZY)
     SalesOrderRecord salesOrderRecord;
 
+    public boolean hasStatus(ProductEntryStatus status) {
+        return getStatus() == status;
+    }
+
 }

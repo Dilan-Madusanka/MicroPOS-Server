@@ -4,12 +4,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ow.micropos.server.model.menu.*;
+import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.target.Customer;
 import ow.micropos.server.model.target.Seat;
 import ow.micropos.server.model.target.Section;
 import ow.micropos.server.repository.auth.PositionRepository;
 import ow.micropos.server.repository.employee.EmployeeRepository;
 import ow.micropos.server.repository.menu.*;
+import ow.micropos.server.repository.orders.ChargeEntryRepository;
+import ow.micropos.server.repository.orders.PaymentEntryRepository;
+import ow.micropos.server.repository.orders.ProductEntryRepository;
+import ow.micropos.server.repository.orders.SalesOrderRepository;
 import ow.micropos.server.repository.target.CustomerRepository;
 import ow.micropos.server.repository.target.SeatRepository;
 import ow.micropos.server.repository.target.SectionRepository;
@@ -20,6 +25,11 @@ import java.util.Objects;
 
 @Service
 public class DatabaseService {
+
+    @Autowired SalesOrderRepository soRepo;
+    @Autowired ProductEntryRepository prodRepo;
+    @Autowired PaymentEntryRepository payRepo;
+    @Autowired ChargeEntryRepository chRepo;
 
     @Autowired CategoryRepository categoryRepo;
     @Autowired MenuItemRepository miRepo;
@@ -32,6 +42,33 @@ public class DatabaseService {
     @Autowired CustomerRepository customerRepo;
     @Autowired EmployeeRepository employeeRepo;
     @Autowired PositionRepository positionRepo;
+
+    /******************************************************************
+     *                                                                *
+     * Sales Order Management
+     *                                                                *
+     ******************************************************************/
+
+    @Transactional(readOnly = true)
+    public List<SalesOrder> getSalesOrders() {
+        return soRepo.findAll();
+    }
+
+    @Transactional(readOnly = false)
+    public boolean removeSalesOrder(long id) {
+
+        SalesOrder so = soRepo.findOne(id);
+
+        if (so == null)
+            return false;
+
+        so.getProductEntries().forEach(prodRepo::delete);
+        so.getPaymentEntries().forEach(payRepo::delete);
+        so.getChargeEntries().forEach(chRepo::delete);
+        soRepo.delete(so);
+
+        return true;
+    }
 
     /******************************************************************
      *                                                                *

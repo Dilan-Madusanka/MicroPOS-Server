@@ -3,6 +3,7 @@ package ow.micropos.server.model.records;
 import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;
 import ow.micropos.server.model.View;
+import ow.micropos.server.model.enums.ChargeType;
 import ow.micropos.server.model.menu.Charge;
 import ow.micropos.server.model.enums.ChargeEntryStatus;
 import ow.micropos.server.model.orders.ChargeEntry;
@@ -41,5 +42,13 @@ public class ChargeEntryRecord {
     @JsonView(View.ChargeEntryRecordWithSalesOrderRecord.class)
     @ManyToOne(fetch = FetchType.LAZY)
     SalesOrderRecord salesOrderRecord;
+
+    public boolean hasStatus(ChargeEntryStatus status) {
+        return getStatus() == status;
+    }
+
+    public boolean hasType(ChargeType type) {
+        return type != null && charge != null && charge.getType() == type;
+    }
 
 }

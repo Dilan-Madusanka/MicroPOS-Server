@@ -27,6 +27,9 @@ public class Category {
     Date archiveDate;
 
     @JsonView(View.Category.class)
+    int weight;
+
+    @JsonView(View.Category.class)
     String name;
 
     @JsonView(View.Category.class)

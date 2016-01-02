@@ -20,17 +20,20 @@ public class ModifierGroup {
     @JsonView(View.ModifierGroupAll.class)
     Date date;
 
-    @JsonView(View.ModifierGroup.class)
-    String name;
-
-    @JsonView(View.ModifierGroup.class)
-    String tag;
-
     @JsonView(View.ModifierGroupAll.class)
     boolean archived;
 
     @JsonView(View.ModifierGroupAll.class)
     Date archiveDate;
+
+    @JsonView(View.ModifierGroup.class)
+    int weight;
+
+    @JsonView(View.ModifierGroup.class)
+    String name;
+
+    @JsonView(View.ModifierGroup.class)
+    String tag;
 
     @JsonView(View.ModifierGroupWithModifier.class)
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "modifierGroup")

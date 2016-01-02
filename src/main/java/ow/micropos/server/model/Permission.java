@@ -3,19 +3,40 @@ package ow.micropos.server.model;
 
 public enum Permission {
 
-    CLOSE_CLIENT,
+    /******************************************************************
+     *                                                                *
+     * Client
+     *                                                                *
+     ******************************************************************/
 
-    GET_EMPLOYEES,
+    CLIENT_CLOSE,
+    CLIENT_MANAGER,
+    CLIENT_SETTINGS,
+
+    /******************************************************************
+     *                                                                *
+     * Customers
+     *                                                                *
+     ******************************************************************/
+
     GET_CUSTOMERS,
+    POST_CUSTOMER,
+
+    /******************************************************************
+     *                                                                *
+     * Menu
+     *                                                                *
+     ******************************************************************/
+
     GET_SECTIONS,
     GET_MENU,
     GET_CHARGES,
 
-    GET_SALES_ORDERS,
-    GET_DINE_IN_SALES_ORDERS,
-    GET_TAKE_OUT_SALES_ORDERS,
-
-    POST_CUSTOMER,
+    /******************************************************************
+     *                                                                *
+     * Orders
+     *                                                                *
+     ******************************************************************/
 
     CREATE_SALES_ORDER,
     REOPEN_SALES_ORDER,
@@ -23,33 +44,57 @@ public enum Permission {
     VOID_SALES_ORDER,
 
     CREATE_PAYMENT_ENTRY,
-    REOPEN_PAYMENT_ENTRY,
     VOID_PAYMENT_ENTRY,
 
     CREATE_CHARGE_ENTRY,
-    REOPEN_CHARGE_ENTRY,
     VOID_CHARGE_ENTRY,
 
     CREATE_PRODUCT_ENTRY,
-    REOPEN_PRODUCT_ENTRY,
     EDIT_PRODUCT_ENTRY,
     HOLD_PRODUCT_ENTRY,
     VOID_PRODUCT_ENTRY,
 
-
     SPLIT_SALES_ORDER,
-
     ACCESS_ALL_EMPLOYEE_ORDER,
 
-    READ_SETTINGS,
-    WRITE_SETTINGS,
+    GET_SALES_ORDERS,
+    GET_DINE_IN_SALES_ORDERS,
+    GET_TAKE_OUT_SALES_ORDERS,
+
+    /******************************************************************
+     *                                                                *
+     * Migration
+     *                                                                *
+     ******************************************************************/
 
     CLOSE_UNPAID_ORDERS,
     MIGRATION,
-    GET_RECORDS,
+
+    /******************************************************************
+     *                                                                *
+     * Reporting
+     *                                                                *
+     ******************************************************************/
+
     SIMPLE_REPORT,
     CURRENT_REPORT,
+    DAY_REPORT,
 
+    /******************************************************************
+     *                                                                *
+     * Records
+     *                                                                *
+     ******************************************************************/
+
+    GET_RECORDS,
+
+    /******************************************************************
+     *                                                                *
+     * Database
+     *                                                                *
+     ******************************************************************/
+
+    DB_SALES_ORDERS,
     DB_MENU_ITEMS,
     DB_CATEGORIES,
     DB_MODIFIER_GROUPS,
@@ -60,6 +105,5 @@ public enum Permission {
     DB_SECTIONS,
     DB_CUSTOMERS,
     DB_CHARGES
-
 
 }

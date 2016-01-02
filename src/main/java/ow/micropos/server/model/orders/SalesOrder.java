@@ -11,6 +11,7 @@ import ow.micropos.server.model.View;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -167,6 +168,10 @@ public class SalesOrder {
         return getType() == type;
     }
 
+    public boolean hasGratuity() {
+        return getGratuityPercent() != null && getGratuityPercent().compareTo(BigDecimal.ZERO) != 0;
+    }
+
     public String getSummary() {
         String summary = "";
         for (ProductEntry pe : getProductEntries()) {
@@ -176,4 +181,5 @@ public class SalesOrder {
         }
         return summary;
     }
+
 }

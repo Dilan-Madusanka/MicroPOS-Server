@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import ow.micropos.server.model.Permission;
 import ow.micropos.server.model.View;
 import ow.micropos.server.model.menu.*;
+import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.target.Customer;
 import ow.micropos.server.model.target.Seat;
 import ow.micropos.server.model.target.Section;
@@ -21,6 +22,36 @@ public class DatabaseController {
 
     @Autowired AuthService authService;
     @Autowired DatabaseService dbService;
+
+    /******************************************************************
+     *                                                                *
+     * Sales Orders
+     *                                                                *
+     ******************************************************************/
+
+    @JsonView(value = View.SalesOrderAll.class)
+    @RequestMapping(value = "/salesOrders", method = RequestMethod.GET)
+    public List<SalesOrder> getSalesOrders(
+            HttpServletRequest request
+    ) {
+
+        authService.authorize(request, Permission.DB_SALES_ORDERS);
+
+        return dbService.getSalesOrders();
+
+    }
+
+    @RequestMapping(value = "/salesOrders/{id}", method = RequestMethod.DELETE)
+    public boolean removeSalesOrder(
+            HttpServletRequest request,
+            @PathVariable("id") long id
+    ) {
+
+        authService.authorize(request, Permission.DB_SALES_ORDERS);
+
+        return dbService.removeSalesOrder(id);
+
+    }
 
     /******************************************************************
      *                                                                *

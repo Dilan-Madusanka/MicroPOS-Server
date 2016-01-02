@@ -9,6 +9,7 @@ import ow.micropos.server.ObjectViewMapper;
 import ow.micropos.server.exception.MicroPosException;
 import ow.micropos.server.model.Permission;
 import ow.micropos.server.model.View;
+import ow.micropos.server.model.employee.Employee;
 import ow.micropos.server.model.enums.*;
 import ow.micropos.server.model.menu.Modifier;
 import ow.micropos.server.model.orders.ChargeEntry;
@@ -16,7 +17,6 @@ import ow.micropos.server.model.orders.PaymentEntry;
 import ow.micropos.server.model.orders.ProductEntry;
 import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.target.Customer;
-import ow.micropos.server.model.employee.Employee;
 import ow.micropos.server.repository.orders.ChargeEntryRepository;
 import ow.micropos.server.repository.orders.PaymentEntryRepository;
 import ow.micropos.server.repository.orders.ProductEntryRepository;
@@ -27,6 +27,7 @@ import ow.micropos.server.repository.target.SeatRepository;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -137,11 +138,29 @@ public class OrderService {
 
     /******************************************************************
      *                                                                *
-     * Transitioning Methods                                          *
-     *                                                                *
-     * Use transitionOrder(SalesOrder). The rest are helper methods.  *
-     *                                                                *
-     * Performs the actual state transition.                          *
+     * State Transitioning Methods
+     *
+     * Use transitionOrder(SalesOrder). The rest are helper methods.
+     *
+     * Sales Order
+     *      REQUEST_OPEN -> OPEN
+     *      REQUEST_CLOSE -> CLOSED
+     *      REQUEST_VOID -> VOID
+     *
+     * Product Entry
+     *      REQUEST_SENT -> SENT
+     *      REQUEST_HOLD -> HOLD
+     *      REQUEST_EDIT -> SENT
+     *      REQUEST_VOID -> VOID
+     *      REQUEST_HOLD_VOID -> VOID
+     *
+     * Payment Entry
+     *      REQUEST_PAID -> PAID
+     *      REQUEST_VOID -> VOID
+     *
+     * Charge Entry
+     *      REQUEST_APPLY -> APPLIED
+     *      REQUEST_VOID -> VOID
      *                                                                *
      ******************************************************************/
 
@@ -215,6 +234,7 @@ public class OrderService {
                 break;
 
             case REQUEST_VOID:
+            case REQUEST_HOLD_VOID:
                 log.debug("\tVoiding\t" + text);
                 item.setStatus(ProductEntryStatus.VOID);
                 prodRepo.save(item);
@@ -274,13 +294,12 @@ public class OrderService {
 
     /******************************************************************
      *                                                                *
-     * Validation Methods                                             *
-     *                                                                *
-     * Use validateOrder(Employee, SalesOrder, SalesOrder). The       *
-     * others are helper methods.                                     *
-     *                                                                *
-     * Checks for valid state transitions and modification            *
-     * permissions.                                                   *
+     * State and Permission Validation Methods
+     *
+     * Use validateOrder(Employee, SalesOrder, SalesOrder). The
+     * others are helper methods.
+     *
+     * Only OPEN, REQUEST_OPEN, REQUEST_CLOSE orders can be changed.
      *                                                                *
      ******************************************************************/
 
@@ -344,6 +363,11 @@ public class OrderService {
 
             authService.authorize(employee, Permission.REOPEN_SALES_ORDER);
 
+        } else if (prevOrder.hasStatus(SalesOrderStatus.CLOSED)
+                && currOrder.hasStatus(SalesOrderStatus.REQUEST_VOID)) {
+
+            authService.authorize(employee, Permission.VOID_SALES_ORDER);
+
         } else if (prevOrder.hasStatus(SalesOrderStatus.VOID)
                 && currOrder.hasStatus(SalesOrderStatus.REQUEST_OPEN)) {
 
@@ -394,7 +418,7 @@ public class OrderService {
             authService.authorize(employee, Permission.CREATE_PRODUCT_ENTRY);
 
         } else if (prevPE.hasStatus(ProductEntryStatus.HOLD)
-                && currPE.hasStatus(ProductEntryStatus.REQUEST_VOID)) {
+                && currPE.hasStatus(ProductEntryStatus.REQUEST_HOLD_VOID)) {
 
             authService.authorize(employee, Permission.VOID_PRODUCT_ENTRY);
 
@@ -485,33 +509,20 @@ public class OrderService {
             @NotNull SalesOrder currSO
     ) {
 
-        List<Long> prevProdIds = prevSO.getProductEntries().stream().map(ProductEntry::getId).collect(Collectors
-                .toList());
-        List<Long> prevPayIds = prevSO.getPaymentEntries().stream().map(PaymentEntry::getId).collect(Collectors
-                .toList());
-        List<Long> prevChargeIds = prevSO.getChargeEntries().stream().map(ChargeEntry::getId).collect(Collectors
-                .toList());
-
-        List<Long> currProdIds = currSO.getProductEntries().stream().map(ProductEntry::getId).collect(Collectors
-                .toList());
-        List<Long> currPayIds = currSO.getPaymentEntries().stream().map(PaymentEntry::getId).collect(Collectors
-                .toList());
-        List<Long> currChargeIds = currSO.getChargeEntries().stream().map(ChargeEntry::getId).collect(Collectors
-                .toList());
+        Long[] prevProdIds = prevSO.getProductEntries().stream().map(ProductEntry::getId).sorted().toArray(Long[]::new);
+        Long[] prevPayIds = prevSO.getPaymentEntries().stream().map(PaymentEntry::getId).sorted().toArray(Long[]::new);
+        Long[] prevChargeIds = prevSO.getChargeEntries().stream().map(ChargeEntry::getId).sorted().toArray(Long[]::new);
+        Long[] currProdIds = currSO.getProductEntries().stream().map(ProductEntry::getId).sorted().toArray(Long[]::new);
+        Long[] currPayIds = currSO.getPaymentEntries().stream().map(PaymentEntry::getId).sorted().toArray(Long[]::new);
+        Long[] currChargeIds = currSO.getChargeEntries().stream().map(ChargeEntry::getId).sorted().toArray(Long[]::new);
 
         return prevSO.getType() != currSO.getType()
                 || !Objects.equals(prevSO.getId(), currSO.getId())
                 || prevSO.getTaxPercent().compareTo(currSO.getTaxPercent()) != 0
                 || prevSO.getGratuityPercent().compareTo(currSO.getGratuityPercent()) != 0
-                || prevProdIds.size() != currProdIds.size()
-                || !prevProdIds.containsAll(currProdIds)
-                || !currProdIds.containsAll(prevProdIds)
-                || prevPayIds.size() != currPayIds.size()
-                || !prevPayIds.containsAll(currPayIds)
-                || !currPayIds.containsAll(prevPayIds)
-                || prevChargeIds.size() != currChargeIds.size()
-                || !prevChargeIds.containsAll(currChargeIds)
-                || !currChargeIds.containsAll(prevChargeIds);
+                || !Arrays.equals(prevProdIds, currProdIds)
+                || !Arrays.equals(prevPayIds, currPayIds)
+                || !Arrays.equals(prevChargeIds, currChargeIds);
     }
 
     private boolean _hasChanged(
@@ -519,16 +530,14 @@ public class OrderService {
             @NotNull ProductEntry currPE
     ) {
 
-        List<Long> prevIds = prevPE.getModifiers().stream().map(Modifier::getId).collect(Collectors.toList());
-        List<Long> currIds = currPE.getModifiers().stream().map(Modifier::getId).collect(Collectors.toList());
+        Long[] prevIds = prevPE.getModifiers().stream().map(Modifier::getId).sorted().toArray(Long[]::new);
+        Long[] currIds = currPE.getModifiers().stream().map(Modifier::getId).sorted().toArray(Long[]::new);
 
         return prevPE.getStatus() != currPE.getStatus()
                 || !Objects.equals(prevPE.getId(), currPE.getId())
                 || prevPE.getQuantity().compareTo(currPE.getQuantity()) != 0
                 || !Objects.equals(prevPE.getMenuItem().getId(), currPE.getMenuItem().getId())
-                || prevIds.size() != currIds.size()
-                || !prevIds.containsAll(currIds)
-                || !currIds.containsAll(prevIds);
+                || !Arrays.equals(prevIds, currIds);
 
     }
 
