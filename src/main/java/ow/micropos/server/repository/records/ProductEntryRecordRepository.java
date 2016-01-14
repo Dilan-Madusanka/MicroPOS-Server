@@ -15,7 +15,8 @@ import java.util.List;
 public interface ProductEntryRecordRepository extends JpaRepository<ProductEntryRecord, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE product_entry_record ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE product_entry_record ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE product_entry_record AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<ProductEntryRecord> findByStatus(ProductEntryStatus status);

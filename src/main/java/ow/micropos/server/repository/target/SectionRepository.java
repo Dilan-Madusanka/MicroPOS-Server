@@ -13,7 +13,8 @@ import java.util.List;
 public interface SectionRepository extends JpaRepository<Section, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE section ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE section ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE section AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<Section> findByArchived(boolean archived);

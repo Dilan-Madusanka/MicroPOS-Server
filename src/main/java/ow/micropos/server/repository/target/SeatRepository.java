@@ -12,7 +12,8 @@ import java.util.List;
 public interface SeatRepository extends JpaRepository<Seat, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE seat ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE seat ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE seat AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<Seat> findByArchived(boolean archived);

@@ -14,7 +14,8 @@ import java.util.List;
 public interface ModifierRepository extends JpaRepository<Modifier, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE modifier ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE modifier ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE modifier AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<Modifier> findByArchived(boolean archived);

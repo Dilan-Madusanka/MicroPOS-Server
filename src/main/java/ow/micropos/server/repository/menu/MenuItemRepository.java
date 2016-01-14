@@ -14,7 +14,8 @@ import java.util.List;
 public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE menu_item ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE menu_item ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE menu_item AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<MenuItem> findByArchived(boolean archived);

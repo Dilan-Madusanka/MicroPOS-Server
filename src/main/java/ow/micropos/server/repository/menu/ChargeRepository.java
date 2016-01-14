@@ -12,7 +12,8 @@ import java.util.List;
 public interface ChargeRepository extends JpaRepository<Charge, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE charge ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE charge ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE charge AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<Charge> findByArchived(boolean archived);

@@ -52,6 +52,9 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public void authorize(Employee employee, Permission... permissions) {
+
+        // Should be obvious, but do not call this on employees provided by client.
+
         if (permissions != null) {
             if (!employee.hasPermissions(permissions)) {
                 throw new UserPermissionException("Requires permissions : " + Arrays.toString(permissions));

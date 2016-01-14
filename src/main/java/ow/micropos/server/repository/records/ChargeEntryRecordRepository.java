@@ -11,7 +11,8 @@ import ow.micropos.server.model.records.PaymentEntryRecord;
 public interface ChargeEntryRecordRepository extends JpaRepository<ChargeEntryRecord, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE charge_entry_record ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE charge_entry_record ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE charge_entry_record AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
 }

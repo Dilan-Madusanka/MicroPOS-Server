@@ -17,7 +17,8 @@ import java.util.List;
 public interface SalesOrderRecordRepository extends JpaRepository<SalesOrderRecord, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE sales_order_record ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE sales_order_record ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE sales_order_record AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<SalesOrderRecord> findByCustomerIsNotNull();

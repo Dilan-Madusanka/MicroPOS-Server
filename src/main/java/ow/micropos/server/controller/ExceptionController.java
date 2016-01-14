@@ -46,7 +46,6 @@ public class ExceptionController {
     @ExceptionHandler(Exception.class)
     public ErrorInfo unexpectedException(Exception ex) {
         return new ErrorInfo(HttpStatus.INTERNAL_SERVER_ERROR, ex);
-
     }
 
 }

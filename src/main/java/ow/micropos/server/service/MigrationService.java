@@ -82,6 +82,7 @@ public class MigrationService {
 
         }
 
+
         // Remove Migrated Sales Orders
         for (SalesOrder so : soList) {
             so.getChargeEntries().forEach(chRepo::delete);
@@ -90,14 +91,21 @@ public class MigrationService {
             soRepo.delete(so);
         }
 
+        return sorList.size();
+
+    }
+
+    @Transactional
+    public boolean resetSalesOrderTables() {
+        if (chRepo.count() != 0 || prodRepo.count() != 0 || payRepo.count() != 0 || soRepo.count() != 0)
+            return false;
+
         // Reset Sales Order Tables
         chRepo.resetIds();
         prodRepo.resetIds();
         payRepo.resetIds();
         soRepo.resetIds();
-
-        return sorList.size();
-
+        return true;
     }
 
 }

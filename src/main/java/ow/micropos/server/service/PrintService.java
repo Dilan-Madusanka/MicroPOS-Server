@@ -69,7 +69,8 @@ public class PrintService {
 
         // Print to each relevant printer
         for (String printer : uniquePrinters) {
-            pd.requestPrint(printer, builder.order(curr, printer.charAt(0) == '@'));
+            boolean printChanges = printer.charAt(0) == '@';
+            pd.requestPrint(printer, builder.order(curr, printChanges));
         }
 
         return true;

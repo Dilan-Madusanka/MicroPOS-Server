@@ -3,10 +3,15 @@ server:
 
 spring:
   datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:./micropos;DB_CLOSE_ON_EXIT=FALSE
-    username: test
-    password: test
+    # url: jdbc:h2:./micropos;DB_CLOSE_ON_EXIT=FALSE
+    # url: jdbc:postgresql://localhost:5432/micropos
+    url: jdbc:mysql://localhost:3306/micropos
+    driver-class-name: com.mysql.jdbc.Driver
+    username: micropos
+    password: owokfsen
+    # Possible fix to connection timeout.
+    test-on-borrow: true
+    validation-query: SELECT 1
 
   jpa:
     show-sql: false
@@ -16,10 +21,10 @@ spring:
       #ddl-auto: updateExisting
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        dialect: org.hibernate.dialect.MySQL57InnoDBDialect
 
 logging:
-  file: micropos.log
+  #file: micropos.log
 
   level:
     org.springframework: INFO

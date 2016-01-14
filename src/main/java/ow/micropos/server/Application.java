@@ -43,6 +43,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.file.CopyOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -129,30 +134,21 @@ public class Application {
 
     public static void main(String[] args) {
         ConfigurableApplicationContext context = SpringApplication.run(Application.class);
+
         context.getBean(Application.class).reset();
-        context.getBean(Application.class).printHost();
-    }
-
-    /******************************************************************
-     *                                                                *
-     * Host Information                                               *
-     *                                                                *
-     ******************************************************************/
-
-    private void printHost() {
-        String hostAddr;
-        String hostName;
 
         try {
-            hostAddr = InetAddress.getLocalHost().getHostAddress();
-            hostName = InetAddress.getLocalHost().getHostName();
+            log.info("MicroPOS Server Host Address : " + InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException e) {
-            hostAddr = "UNKNOWN";
-            hostName = "UNKNOWN";
+            log.info("MicroPOS Server Host Address : UNKNOWN");
         }
 
-        log.info("MicroPOS Server Host Address : " + hostAddr);
-        log.info("MicroPOS Server Host Name    : " + hostName);
+        try {
+            log.info("MicroPOS Server Host Name    : " + InetAddress.getLocalHost().getHostName());
+        } catch (UnknownHostException e) {
+            log.info("MicroPOS Server Host Name    : UNKNOWN");
+        }
+
     }
 
     /******************************************************************

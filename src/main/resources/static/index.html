@@ -1,27 +1,86 @@
 <!DOCTYPE html>
 <html>
+
 <head lang="en">
-    <meta charset="UTF-8">
-    <title>Client Setup</title>
+    <title>MicroPOS</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <!--[if lte IE 8]>
+    <script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+    <link rel="stylesheet" href="assets/css/main.css"/>
+    <noscript>
+        <link rel="stylesheet" href="assets/css/noscript.css"/>
+    </noscript>
+    <!--[if lte IE 8]>
+    <link rel="stylesheet" href="assets/css/ie8.css"/><![endif]-->
 </head>
+
 <body>
-<div>
-    <h2>64-Bit Setup Files</h2>
 
-    <h3><a href="/gen/micropos.bat">Bootstrap File</a></h3>
+<!-- Wrapper -->
+<div id="wrapper">
 
-    <h3><a href="/file/curl.exe">Curl 64-Bit</a></h3>
+    <!-- Navigation -->
+    <nav id="nav">
+        <a href="#boot64" class="icon fa-download active"><span>Bootstrap 64-Bit</span></a>
+        <a href="#boot32" class="icon fa-download"><span>Bootstrap 32-Bit</span></a>
+        <a href="#other" class="icon fa-wrench"><span>Other Files</span></a>
+    </nav>
 
-    <h3><a href="/file/rxtxSerial.dll">Serial Driver 64-Bit</a></h3>
+    <!-- Main Content -->
+    <div id="main">
+
+        <!-- Boot 64 -->
+        <article id="boot64" class="panel">
+            <header>
+                <h2>64-Bit Client Bootstrap</h2>
+            </header>
+            <section>
+                <h3><a href="/gen/micropos.bat">Bootstrap File</a></h3>
+
+                <h3><a href="/file/curl.exe">Curl 64-Bit</a></h3>
+
+                <h3><a href="/file/rxtxSerial.dll">Serial Driver 64-Bit</a></h3>
+            </section>
+        </article>
+
+        <!-- Boot 32 -->
+        <article id="boot32" class="panel">
+            <header>
+                <h2>32-Bit Client Bootstrap</h2>
+            </header>
+            <section>
+                <h3><a href="/gen/micropos32.bat">Bootstrap File</a></h3>
+
+                <h3><a href="/file/curl32.exe">Curl 32-Bit</a></h3>
+
+                <h3><a href="/file/rxtxSerial32.dll">Serial Driver 32-Bit</a></h3>
+            </section>
+        </article>
+
+        <!-- Other -->
+        <article id="other" class="panel">
+            <header>
+                <h2>Additional Files</h2>
+            </header>
+            <section>
+                <h3><a href="/file/client.jar">MicroPOS Client</a></h3>
+
+                <h3><a href="/file/serialmon.jar">Serial Monitor</a></h3>
+            </section>
+        </article>
+    </div>
 </div>
-<div>
-    <h2>32-Bit Setup Files</h2>
 
-    <h3><a href="/gen/micropos32.bat">Bootstrap File</a></h3>
+<!-- Scripts -->
+<script src="assets/js/jquery.min.js"></script>
+<script src="assets/js/skel.min.js"></script>
+<script src="assets/js/skel-viewport.min.js"></script>
+<script src="assets/js/util.js"></script>
+<!--[if lte IE 8]>
+<script src="assets/js/ie/respond.min.js"></script><![endif]-->
+<script src="assets/js/main.js"></script>
 
-    <h3><a href="/file/curl32.exe">Curl 32-Bit</a></h3>
-
-    <h3><a href="/file/rxtxSerial32.dll">Serial Driver 32-Bit</a></h3>
-</div>
 </body>
+
 </html>

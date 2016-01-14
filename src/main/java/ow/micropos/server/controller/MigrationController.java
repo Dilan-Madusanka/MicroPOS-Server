@@ -37,7 +37,12 @@ public class MigrationController {
 
         authService.authorize(request, Permission.MIGRATION);
 
-        return mService.migrateSalesOrders();
+        int count = mService.migrateSalesOrders();
+
+        if (count > 0)
+            mService.resetSalesOrderTables();
+
+        return count;
     }
 
 }

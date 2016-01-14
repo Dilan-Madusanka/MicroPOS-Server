@@ -12,7 +12,8 @@ import java.util.List;
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE customer ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE customer ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE customer AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<Customer> findByArchived(boolean archived);

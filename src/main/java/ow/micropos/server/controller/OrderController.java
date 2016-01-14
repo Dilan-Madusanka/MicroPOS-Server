@@ -6,11 +6,14 @@ import org.springframework.web.bind.annotation.*;
 import ow.micropos.server.model.Permission;
 import ow.micropos.server.model.View;
 import ow.micropos.server.model.employee.Employee;
+import ow.micropos.server.model.enums.ProductEntryStatus;
 import ow.micropos.server.model.enums.SalesOrderStatus;
 import ow.micropos.server.model.enums.SalesOrderType;
 import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.service.AuthService;
 import ow.micropos.server.service.OrderService;
+import ow.micropos.server.service.SalesOrderService;
+import ow.micropos.server.service.SplitService;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -21,7 +24,9 @@ import java.util.stream.Collectors;
 public class OrderController {
 
     @Autowired AuthService authService;
-    @Autowired OrderService oService;
+    @Autowired SalesOrderService soService;
+    @Autowired OrderService orderService;
+    @Autowired SplitService splitService;
 
     @JsonView(value = View.SalesOrderAll.class)
     @RequestMapping(value = "", method = RequestMethod.GET)
@@ -42,8 +47,9 @@ public class OrderController {
         if (type == SalesOrderType.DINEIN)
         */
 
-        return oService.findSalesOrders(status, type);
-
+        List<SalesOrder> result = soService.findSalesOrders(status, type);
+        result.forEach(soService::filterVoidProductEntries);
+        return result;
     }
 
     @JsonView(value = View.SalesOrderAll.class)
@@ -56,7 +62,9 @@ public class OrderController {
 
         authService.authorize(request, Permission.GET_DINE_IN_SALES_ORDERS);
 
-        return oService.findSalesOrdersBySeat(id, status);
+        List<SalesOrder> result = soService.findSalesOrdersBySeat(id, status);
+        result.forEach(soService::filterVoidProductEntries);
+        return result;
 
     }
 
@@ -70,7 +78,9 @@ public class OrderController {
 
         authService.authorize(request, Permission.GET_TAKE_OUT_SALES_ORDERS);
 
-        return oService.findSalesOrdersByCustomer(id, status);
+        List<SalesOrder> result = soService.findSalesOrdersByCustomer(id, status);
+        result.forEach(soService::filterVoidProductEntries);
+        return result;
 
     }
 
@@ -85,11 +95,11 @@ public class OrderController {
         if (!employee.isOwnerOf(salesOrder))
             authService.authorize(employee, Permission.ACCESS_ALL_EMPLOYEE_ORDER);
 
-        return oService.processOrder(employee, salesOrder);
+        return orderService.order(employee, salesOrder);
 
     }
 
-    @RequestMapping(value = "/batch", method = RequestMethod.POST)
+    @RequestMapping(value = "/split", method = RequestMethod.POST)
     public List<Long> postSalesOrders(
             HttpServletRequest request,
             @RequestBody(required = true) List<SalesOrder> salesOrders
@@ -100,10 +110,7 @@ public class OrderController {
         if (!employee.isOwnerOf(salesOrders))
             authService.authorize(employee, Permission.ACCESS_ALL_EMPLOYEE_ORDER);
 
-        return salesOrders
-                .stream()
-                .map(salesOrder -> oService.processOrder(employee, salesOrder))
-                .collect(Collectors.toList());
+        return splitService.splitOrder(employee, salesOrders);
 
     }
 

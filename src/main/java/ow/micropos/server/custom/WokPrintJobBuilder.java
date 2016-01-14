@@ -48,8 +48,8 @@ public class WokPrintJobBuilder {
             builder.text("VOID ORDER").feed(2);
 
         } else if (!so.hasStatus(SalesOrderStatus.REQUEST_OPEN)) {
-            // Notify of change if it has already been opened
-            builder.text("ORDER CHANGED").feed(2);
+            // Notify changed order if it has already been opened
+            builder.text("CHANGED ORDER").feed(2);
         }
 
         builder.text("Order #" + so.getId())
@@ -61,7 +61,12 @@ public class WokPrintJobBuilder {
                 .feed(2)
                 .align(EscPosBuilder.Align.LEFT);
 
-        so.getProductEntries().forEach(pe -> productEntry(pe, changesOnly));
+        if (so.hasStatus(SalesOrderStatus.REQUEST_VOID)) {
+            // Print entire ticket if REQUEST_VOID
+            so.getProductEntries().forEach(pe -> productEntry(pe, false));
+        } else {
+            so.getProductEntries().forEach(pe -> productEntry(pe, changesOnly));
+        }
 
         return builder.feed(5).cut(EscPosBuilder.Cut.PART).getBytes();
 

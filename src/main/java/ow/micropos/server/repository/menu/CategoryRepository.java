@@ -15,7 +15,8 @@ import java.util.List;
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE category ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE category ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE category AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<Category> findByArchived(boolean archived);

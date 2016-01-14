@@ -3,6 +3,8 @@ package ow.micropos.server.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ow.micropos.server.model.auth.Position;
+import ow.micropos.server.model.employee.Employee;
 import ow.micropos.server.model.menu.*;
 import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.target.Customer;
@@ -43,6 +45,119 @@ public class DatabaseService {
     @Autowired EmployeeRepository employeeRepo;
     @Autowired PositionRepository positionRepo;
 
+
+    /******************************************************************
+     *                                                                *
+     * Position Management
+     *                                                                *
+     ******************************************************************/
+
+    @Transactional(readOnly = true)
+    public List<Position> getPositions() {
+        return positionRepo.findByArchived(false);
+    }
+
+    @Transactional(readOnly = false)
+    public long updatePosition(Position position) {
+
+        if (position.getId() == null) {
+
+            position.setDate(new Date());
+            positionRepo.save(position);
+
+        } else {
+
+            positionRepo.save(position);
+
+        }
+
+        return position.getId();
+
+    }
+
+    @Transactional(readOnly = false)
+    public boolean removePosition(long id) {
+
+        Position oldPosition = positionRepo.getOne(id);
+
+        if (oldPosition != null) {
+
+            // Remove this position from each employee.
+            List<Employee> employees = oldPosition.getEmployees();
+
+            if (employees != null && !employees.isEmpty()) {
+                employees.forEach(employee -> employee.getPositions().remove(oldPosition));
+                employeeRepo.save(employees);
+            }
+
+            positionRepo.delete(id);
+
+            return true;
+
+        } else {
+
+            return false;
+
+        }
+    }
+
+    /******************************************************************
+     *                                                                *
+     * Employee Management
+     *                                                                *
+     ******************************************************************/
+
+    @Transactional(readOnly = true)
+    public List<Employee> getEmployees() {
+        return employeeRepo.findByArchived(false);
+    }
+
+    @Transactional(readOnly = false)
+    public long updateEmployee(Employee employee) {
+
+        if (employee.getId() == null) {
+
+            employee.setDate(new Date());
+            employeeRepo.save(employee);
+
+        } else {
+
+            employeeRepo.save(employee);
+
+        }
+
+        return employee.getId();
+
+    }
+
+    @Transactional(readOnly = false)
+    public boolean removeEmployee(long id) {
+
+        Employee oldEmployee = employeeRepo.findOne(id);
+
+        if (oldEmployee != null) {
+
+            // Unreferenced employees can be deleted
+            if (oldEmployee.getSalesOrders() == null
+                    || oldEmployee.getSalesOrders().isEmpty()) {
+                employeeRepo.delete(id);
+
+                // Referenced employees must be archived
+            } else {
+                oldEmployee.setArchived(true);
+                oldEmployee.setArchiveDate(new Date());
+                employeeRepo.save(oldEmployee);
+            }
+
+            return true;
+
+        } else {
+
+            return false;
+
+        }
+    }
+    
     /******************************************************************
      *                                                                *
      * Sales Order Management

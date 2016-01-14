@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ow.micropos.server.model.Permission;
 import ow.micropos.server.model.View;
+import ow.micropos.server.model.auth.Position;
+import ow.micropos.server.model.employee.Employee;
 import ow.micropos.server.model.menu.*;
 import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.target.Customer;
@@ -22,6 +24,90 @@ public class DatabaseController {
 
     @Autowired AuthService authService;
     @Autowired DatabaseService dbService;
+
+    /******************************************************************
+     *                                                                *
+     * Positions
+     *                                                                *
+     ******************************************************************/
+
+    @JsonView(value = View.Position.class)
+    @RequestMapping(value = "/positions", method = RequestMethod.GET)
+    public List<Position> getPositions(
+            HttpServletRequest request
+    ) {
+
+        authService.authorize(request, Permission.DB_POSITIONS);
+
+        return dbService.getPositions();
+
+    }
+
+    @RequestMapping(value = "/positions", method = RequestMethod.POST)
+    public long updatePosition(
+            HttpServletRequest request,
+            @RequestBody(required = true) Position position
+    ) {
+
+        authService.authorize(request, Permission.DB_POSITIONS);
+
+        return dbService.updatePosition(position);
+
+    }
+
+    @RequestMapping(value = "/positions/{id}", method = RequestMethod.DELETE)
+    public boolean removePosition(
+            HttpServletRequest request,
+            @PathVariable("id") long id
+    ) {
+
+        authService.authorize(request, Permission.DB_POSITIONS);
+
+        return dbService.removePosition(id);
+
+    }
+
+    /******************************************************************
+     *                                                                *
+     * Employees
+     *                                                                *
+     ******************************************************************/
+
+    @JsonView(value = View.EmployeeWithPosition.class)
+    @RequestMapping(value = "/employees", method = RequestMethod.GET)
+    public List<Employee> getEmployees(
+            HttpServletRequest request
+    ) {
+
+        authService.authorize(request, Permission.DB_EMPLOYEES);
+
+        return dbService.getEmployees();
+
+    }
+
+    @RequestMapping(value = "/employees", method = RequestMethod.POST)
+    public long updateEmployee(
+            HttpServletRequest request,
+            @RequestBody(required = true) Employee employee
+    ) {
+
+        authService.authorize(request, Permission.DB_EMPLOYEES);
+
+        return dbService.updateEmployee(employee);
+
+    }
+
+    @RequestMapping(value = "/employees/{id}", method = RequestMethod.DELETE)
+    public boolean removeEmployee(
+            HttpServletRequest request,
+            @PathVariable("id") long id
+    ) {
+
+        authService.authorize(request, Permission.DB_EMPLOYEES);
+
+        return dbService.removeEmployee(id);
+
+    }
 
     /******************************************************************
      *                                                                *

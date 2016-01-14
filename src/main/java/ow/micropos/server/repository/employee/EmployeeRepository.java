@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import ow.micropos.server.model.View;
+import ow.micropos.server.model.auth.Position;
 import ow.micropos.server.model.employee.Employee;
 
 import java.util.List;
@@ -12,7 +14,8 @@ import java.util.List;
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     @Modifying
-    @Query(value = "ALTER TABLE employee ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    //@Query(value = "ALTER TABLE employee ALTER COLUMN id RESTART WITH 1", nativeQuery = true)
+    @Query(value = "ALTER TABLE employee AUTO_INCREMENT = 1", nativeQuery = true)
     void resetIds();
 
     List<Employee> findByArchived(boolean archived);

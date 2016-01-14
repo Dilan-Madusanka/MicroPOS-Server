@@ -28,9 +28,7 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -44,80 +42,19 @@ public class OrderService {
     @Autowired PaymentEntryRepository payRepo;
     @Autowired ProductEntryRepository prodRepo;
     @Autowired ChargeEntryRepository chargeRepo;
+    @Autowired SalesOrderService soService;
     @Autowired PrintService printService;
     @Autowired AuthService authService;
 
-    @Transactional(readOnly = true)
-    public List<SalesOrder> findSalesOrders(SalesOrderStatus status, SalesOrderType type) {
-        if (status == null) {
-            if (type == null)
-                return soRepo.findAll();
-            else
-                return soRepo.findByType(type);
-        } else {
-            if (type == null)
-                return soRepo.findByStatus(status);
-            else
-                return soRepo.findByStatusAndType(status, type);
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public List<SalesOrder> findSalesOrdersBySeat(long id, SalesOrderStatus status) {
-        if (status != null)
-            return seatRepo.findOne(id)
-                    .getSalesOrders()
-                    .stream()
-                    .filter(so -> so.hasStatus(status))
-                    .collect(Collectors.toList());
-        else
-            return seatRepo.findOne(id).getSalesOrders();
-    }
-
-    @Transactional(readOnly = true)
-    public List<SalesOrder> findSalesOrdersByCustomer(long id, SalesOrderStatus status) {
-        if (status != null)
-            return customerRepo.findOne(id)
-                    .getSalesOrders()
-                    .stream()
-                    .filter(so -> so.hasStatus(status))
-                    .collect(Collectors.toList());
-        else
-            return customerRepo.findOne(id).getSalesOrders();
-    }
-
     @Transactional(readOnly = false)
-    public void saveSalesOrder(SalesOrder salesOrder) {
-
-        soRepo.save(salesOrder);
-
-        for (ChargeEntry charge : salesOrder.getChargeEntries()) {
-            charge.setSalesOrder(salesOrder);
-            chargeRepo.save(charge);
-        }
-
-        for (PaymentEntry pay : salesOrder.getPaymentEntries()) {
-            pay.setSalesOrder(salesOrder);
-            payRepo.save(pay);
-        }
-
-        for (ProductEntry prod : salesOrder.getProductEntries()) {
-            prod.setSalesOrder(salesOrder);
-            prodRepo.save(prod);
-        }
-
-    }
-
-    @Transactional(readOnly = false)
-    public long processOrder(Employee employee, SalesOrder currOrder) {
+    public long order(Employee employee, SalesOrder currOrder) {
 
         SalesOrder prevOrder = currOrder.getId() == null ? null : soRepo.findOne(currOrder.getId());
-
         // Validation
         validateOrder(employee, prevOrder, currOrder);
 
         // Persistence
-        saveSalesOrder(currOrder);
+        soService.saveSalesOrder(currOrder);
 
         // Printing
         printService.printOrder(currOrder);
@@ -509,20 +446,39 @@ public class OrderService {
             @NotNull SalesOrder currSO
     ) {
 
-        Long[] prevProdIds = prevSO.getProductEntries().stream().map(ProductEntry::getId).sorted().toArray(Long[]::new);
         Long[] prevPayIds = prevSO.getPaymentEntries().stream().map(PaymentEntry::getId).sorted().toArray(Long[]::new);
         Long[] prevChargeIds = prevSO.getChargeEntries().stream().map(ChargeEntry::getId).sorted().toArray(Long[]::new);
-        Long[] currProdIds = currSO.getProductEntries().stream().map(ProductEntry::getId).sorted().toArray(Long[]::new);
         Long[] currPayIds = currSO.getPaymentEntries().stream().map(PaymentEntry::getId).sorted().toArray(Long[]::new);
         Long[] currChargeIds = currSO.getChargeEntries().stream().map(ChargeEntry::getId).sorted().toArray(Long[]::new);
 
-        return prevSO.getType() != currSO.getType()
+        if (prevSO.getType() != currSO.getType()
                 || !Objects.equals(prevSO.getId(), currSO.getId())
                 || prevSO.getTaxPercent().compareTo(currSO.getTaxPercent()) != 0
                 || prevSO.getGratuityPercent().compareTo(currSO.getGratuityPercent()) != 0
-                || !Arrays.equals(prevProdIds, currProdIds)
                 || !Arrays.equals(prevPayIds, currPayIds)
-                || !Arrays.equals(prevChargeIds, currChargeIds);
+                || !Arrays.equals(prevChargeIds, currChargeIds))
+            return true;
+
+        // Ensure all previous order entries are accounted for. VOID orders can be ignored.
+        // ProductEntry details are not considered on this pass.
+        for (ProductEntry prevPE : prevSO.getProductEntries()) {
+            if (prevPE.hasStatus(ProductEntryStatus.VOID))
+                continue;
+
+            boolean found = false;
+            for (ProductEntry currPE : currSO.getProductEntries()) {
+                if (Objects.equals(prevPE.getId(), currPE.getId())) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+                return true;
+        }
+
+        return false;
+
     }
 
     private boolean _hasChanged(
