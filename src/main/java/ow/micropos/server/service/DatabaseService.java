@@ -3,6 +3,7 @@ package ow.micropos.server.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ow.micropos.server.exception.MicroPosException;
 import ow.micropos.server.model.auth.Position;
 import ow.micropos.server.model.employee.Employee;
 import ow.micropos.server.model.menu.*;
@@ -17,13 +18,16 @@ import ow.micropos.server.repository.orders.ChargeEntryRepository;
 import ow.micropos.server.repository.orders.PaymentEntryRepository;
 import ow.micropos.server.repository.orders.ProductEntryRepository;
 import ow.micropos.server.repository.orders.SalesOrderRepository;
+import ow.micropos.server.repository.records.ChargeEntryRecordRepository;
+import ow.micropos.server.repository.records.PaymentEntryRecordRepository;
+import ow.micropos.server.repository.records.ProductEntryRecordRepository;
+import ow.micropos.server.repository.records.SalesOrderRecordRepository;
 import ow.micropos.server.repository.target.CustomerRepository;
 import ow.micropos.server.repository.target.SeatRepository;
 import ow.micropos.server.repository.target.SectionRepository;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 public class DatabaseService {
@@ -32,6 +36,11 @@ public class DatabaseService {
     @Autowired ProductEntryRepository prodRepo;
     @Autowired PaymentEntryRepository payRepo;
     @Autowired ChargeEntryRepository chRepo;
+
+    @Autowired SalesOrderRecordRepository sorRepo;
+    @Autowired ProductEntryRecordRepository prodrRepo;
+    @Autowired PaymentEntryRecordRepository payrRepo;
+    @Autowired ChargeEntryRecordRepository chrRepo;
 
     @Autowired CategoryRepository categoryRepo;
     @Autowired MenuItemRepository miRepo;
@@ -115,15 +124,19 @@ public class DatabaseService {
     @Transactional(readOnly = false)
     public long updateEmployee(Employee employee) {
 
-        if (employee.getId() == null) {
+        List<Employee> employees = employeeRepo.findByPin(employee.getPin());
 
+        if (employees != null && !employees.isEmpty())
+            for (Employee emp : employees)
+                if (!emp.getId().equals(employee.getId()))
+                    throw new MicroPosException("Employee with that PIN exists");
+
+        if (employee.getId() == null) {
             employee.setDate(new Date());
             employeeRepo.save(employee);
 
         } else {
-
             employeeRepo.save(employee);
-
         }
 
         return employee.getId();
@@ -137,16 +150,19 @@ public class DatabaseService {
 
         if (oldEmployee != null) {
 
-            // Unreferenced employees can be deleted
-            if (oldEmployee.getSalesOrders() == null
-                    || oldEmployee.getSalesOrders().isEmpty()) {
-                employeeRepo.delete(id);
-
-                // Referenced employees must be archived
-            } else {
+            // Referenced employees must be archived
+            if (oldEmployee.getSalesOrders() != null && !oldEmployee.getSalesOrders().isEmpty()) {
                 oldEmployee.setArchived(true);
                 oldEmployee.setArchiveDate(new Date());
                 employeeRepo.save(oldEmployee);
+            } else if (oldEmployee.getSalesOrderRecords() != null && !oldEmployee.getSalesOrderRecords().isEmpty()) {
+                oldEmployee.setArchived(true);
+                oldEmployee.setArchiveDate(new Date());
+                employeeRepo.save(oldEmployee);
+
+                // Unreferenced employees can be deleted
+            } else {
+                employeeRepo.delete(id);
             }
 
             return true;
@@ -157,7 +173,7 @@ public class DatabaseService {
 
         }
     }
-    
+
     /******************************************************************
      *                                                                *
      * Sales Order Management
@@ -221,16 +237,19 @@ public class DatabaseService {
 
         if (oldCustomer != null) {
 
-            // Unreferenced customers can be deleted
-            if (oldCustomer.getSalesOrders() == null
-                    || oldCustomer.getSalesOrders().isEmpty()) {
-                customerRepo.delete(id);
-
-                // Referenced customers must be archived
-            } else {
+            // Referenced customers must be archived
+            if (oldCustomer.getSalesOrders() != null && !oldCustomer.getSalesOrders().isEmpty()) {
                 oldCustomer.setArchived(true);
                 oldCustomer.setArchiveDate(new Date());
                 customerRepo.save(oldCustomer);
+            } else if (oldCustomer.getSalesOrderRecords() != null && !oldCustomer.getSalesOrderRecords().isEmpty()) {
+                oldCustomer.setArchived(true);
+                oldCustomer.setArchiveDate(new Date());
+                customerRepo.save(oldCustomer);
+
+                // Unreferenced customers can be deleted
+            } else {
+                customerRepo.delete(id);
             }
 
             return true;
@@ -266,20 +285,25 @@ public class DatabaseService {
 
             MenuItem oldMenuItem = miRepo.findOne(menuItem.getId());
 
-            // Unreferenced menu items can be updated in place.
-            if (oldMenuItem.getProductEntries() == null || oldMenuItem.getProductEntries().isEmpty()) {
-                miRepo.save(menuItem);
-
-                // Referenced menu items prices can not be updated in place.
-            } else if (oldMenuItem.getPrice().compareTo(menuItem.getPrice()) != 0) {
+            // Referenced menu items prices can not be updated in place.
+            if (oldMenuItem.getProductEntries() != null
+                    && !oldMenuItem.getProductEntries().isEmpty()
+                    && oldMenuItem.getPrice().compareTo(menuItem.getPrice()) != 0) {
                 oldMenuItem.setArchived(true);
                 oldMenuItem.setArchiveDate(new Date());
                 miRepo.save(oldMenuItem);
-
+                menuItem.setId(null);
+                miRepo.save(menuItem);
+            } else if (oldMenuItem.getProductEntryRecords() != null
+                    && !oldMenuItem.getProductEntryRecords().isEmpty()
+                    && oldMenuItem.getPrice().compareTo(menuItem.getPrice()) != 0) {
+                oldMenuItem.setArchived(true);
+                oldMenuItem.setArchiveDate(new Date());
+                miRepo.save(oldMenuItem);
                 menuItem.setId(null);
                 miRepo.save(menuItem);
 
-                // Referenced menu items cosmetic changed can be updated in place.
+                // Unreferenced menu items can be updated in place
             } else {
                 miRepo.save(menuItem);
             }
@@ -297,16 +321,21 @@ public class DatabaseService {
 
         if (oldMenuItem != null) {
 
-            // Unreferenced menu items can be deleted
-            if (oldMenuItem.getProductEntries() == null
-                    || oldMenuItem.getProductEntries().isEmpty()) {
-                miRepo.delete(id);
-
-                // Referenced menu items must be archived
-            } else {
+            // Referenced menu items must be archived
+            if (oldMenuItem.getProductEntries() != null
+                    && !oldMenuItem.getProductEntries().isEmpty()) {
                 oldMenuItem.setArchived(true);
                 oldMenuItem.setArchiveDate(new Date());
                 miRepo.save(oldMenuItem);
+            } else if (oldMenuItem.getProductEntryRecords() != null
+                    && !oldMenuItem.getProductEntryRecords().isEmpty()) {
+                oldMenuItem.setArchived(true);
+                oldMenuItem.setArchiveDate(new Date());
+                miRepo.save(oldMenuItem);
+
+                // Unreferenced menu items can be deleted
+            } else {
+                miRepo.delete(id);
             }
 
             return true;
@@ -457,24 +486,28 @@ public class DatabaseService {
 
             Modifier oldModifier = modifierRepo.findOne(modifier.getId());
 
-            // Unreferenced menu items can be updated in place.
-            if (oldModifier.getProductEntries() == null || oldModifier.getProductEntries().isEmpty()) {
-                modifierRepo.save(modifier);
-
-                // Referenced menu items prices can not be updated in place.
-            } else if (oldModifier.getPrice().compareTo(modifier.getPrice()) != 0) {
+            // Referenced modifier prices can not be updated in place.
+            if (oldModifier.getProductEntries() != null
+                    && !oldModifier.getProductEntries().isEmpty()
+                    && oldModifier.getPrice().compareTo(modifier.getPrice()) != 0) {
                 oldModifier.setArchived(true);
                 oldModifier.setArchiveDate(new Date());
                 modifierRepo.save(oldModifier);
-
+                modifier.setId(null);
+                modifierRepo.save(modifier);
+            } else if (oldModifier.getProductEntryRecords() != null
+                    && !oldModifier.getProductEntryRecords().isEmpty()
+                    && oldModifier.getPrice().compareTo(modifier.getPrice()) != 0) {
+                oldModifier.setArchived(true);
+                oldModifier.setArchiveDate(new Date());
+                modifierRepo.save(oldModifier);
                 modifier.setId(null);
                 modifierRepo.save(modifier);
 
-                // Referenced menu items cosmetic changed can be updated in place.
+                // Unreferenced modifiers can be updated in place
             } else {
                 modifierRepo.save(modifier);
             }
-
         }
 
         return modifier.getId();
@@ -488,16 +521,21 @@ public class DatabaseService {
 
         if (oldModifier != null) {
 
-            // Unreferenced menu items can be deleted
-            if (oldModifier.getProductEntries() == null
-                    || oldModifier.getProductEntries().isEmpty()) {
-                modifierRepo.delete(id);
-
-                // Referenced menu items must be archived
-            } else {
+            // Referenced modifiers must be archived
+            if (oldModifier.getProductEntries() != null
+                    && !oldModifier.getProductEntries().isEmpty()) {
                 oldModifier.setArchived(true);
                 oldModifier.setArchiveDate(new Date());
                 modifierRepo.save(oldModifier);
+            } else if (oldModifier.getProductEntryRecords() != null
+                    && !oldModifier.getProductEntryRecords().isEmpty()) {
+                oldModifier.setArchived(true);
+                oldModifier.setArchiveDate(new Date());
+                modifierRepo.save(oldModifier);
+
+                // Unreferenced modifiers can be deleted
+            } else {
+                modifierRepo.delete(id);
             }
 
             return true;
@@ -532,25 +570,29 @@ public class DatabaseService {
 
             Charge oldCharge = chargeRepo.findOne(charge.getId());
 
-            // Unreferenced menu items can be updated in place.
-            if (oldCharge.getChargeEntries() == null || oldCharge.getChargeEntries().isEmpty()) {
-                chargeRepo.save(charge);
-
-                // Referenced menu items prices can not be updated in place.
-            } else if (oldCharge.getAmount().compareTo(charge.getAmount()) != 0
-                    || oldCharge.getType() != charge.getType()) {
+            // Referenced charge amounts & types can not be updated in place.
+            if ((oldCharge.getAmount().compareTo(charge.getAmount()) != 0 || oldCharge.getType() != charge.getType())
+                    && oldCharge.getChargeEntries() != null
+                    && !oldCharge.getChargeEntries().isEmpty()) {
                 oldCharge.setArchived(true);
                 oldCharge.setArchiveDate(new Date());
                 chargeRepo.save(oldCharge);
-
+                charge.setId(null);
+                chargeRepo.save(charge);
+            } else if ((oldCharge.getAmount().compareTo(charge.getAmount()) != 0 || oldCharge.getType() != charge
+                    .getType())
+                    && oldCharge.getChargeEntryRecords() != null
+                    && !oldCharge.getChargeEntryRecords().isEmpty()) {
+                oldCharge.setArchived(true);
+                oldCharge.setArchiveDate(new Date());
+                chargeRepo.save(oldCharge);
                 charge.setId(null);
                 chargeRepo.save(charge);
 
-                // Referenced menu items cosmetic changed can be updated in place.
+                // Unreferenced charges can be updated in place
             } else {
                 chargeRepo.save(charge);
             }
-
         }
 
         return charge.getId();
@@ -564,16 +606,21 @@ public class DatabaseService {
 
         if (oldCharge != null) {
 
-            // Unreferenced menu items can be deleted
-            if (oldCharge.getChargeEntries() == null
-                    || oldCharge.getChargeEntries().isEmpty()) {
-                chargeRepo.delete(id);
-
-                // Referenced menu items must be archived
-            } else {
+            // Referenced charges must be archived
+            if (oldCharge.getChargeEntries() != null
+                    && !oldCharge.getChargeEntries().isEmpty()) {
                 oldCharge.setArchived(true);
                 oldCharge.setArchiveDate(new Date());
                 chargeRepo.save(oldCharge);
+            } else if (oldCharge.getChargeEntryRecords() != null
+                    && !oldCharge.getChargeEntryRecords().isEmpty()) {
+                oldCharge.setArchived(true);
+                oldCharge.setArchiveDate(new Date());
+                chargeRepo.save(oldCharge);
+
+                // Unreferenced charges can be deleted
+            } else {
+                chargeRepo.delete(id);
             }
 
             return true;
@@ -681,16 +728,19 @@ public class DatabaseService {
 
         if (oldSeat != null) {
 
-            // Unreferenced categories can be deleted
-            if (oldSeat.getSalesOrders() == null
-                    || oldSeat.getSalesOrders().isEmpty()) {
-                seatRepo.delete(id);
-
-                // Referenced categories must be archived
-            } else {
+            // Referenced seats must be archived
+            if (oldSeat.getSalesOrders() != null && !oldSeat.getSalesOrders().isEmpty()) {
                 oldSeat.setArchived(true);
                 oldSeat.setArchiveDate(new Date());
                 seatRepo.save(oldSeat);
+            } else if (oldSeat.getSalesOrderRecords() != null && !oldSeat.getSalesOrderRecords().isEmpty()) {
+                oldSeat.setArchived(true);
+                oldSeat.setArchiveDate(new Date());
+                seatRepo.save(oldSeat);
+
+                // Unreferenced seats can be deleted
+            } else {
+                seatRepo.delete(id);
             }
 
             return true;

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;
 import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.View;
+import ow.micropos.server.model.records.SalesOrderRecord;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -43,5 +44,9 @@ public class Seat {
     @JsonView(View.SeatWithSalesOrder.class)
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "seat")
     List<SalesOrder> salesOrders;
+
+    @JsonView(View.SeatWithSalesOrderRecord.class)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "seat")
+    List<SalesOrderRecord> salesOrderRecords;
 
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import lombok.Data;
 import ow.micropos.server.model.orders.ProductEntry;
 import ow.micropos.server.model.View;
+import ow.micropos.server.model.records.ProductEntryRecord;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -47,6 +48,10 @@ public class MenuItem {
     @JsonView(View.MenuItemWithSalesOrder.class)
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "menuItem")
     List<ProductEntry> productEntries;
+
+    @JsonView(View.MenuItemWithSalesOrderRecord.class)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "menuItem")
+    List<ProductEntryRecord> productEntryRecords;
 
     @JsonView(View.MenuItem.class)
     @ElementCollection(fetch = FetchType.LAZY)

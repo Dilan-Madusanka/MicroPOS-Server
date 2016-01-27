@@ -1,6 +1,7 @@
 package ow.micropos.server.service;
 
 import email.com.gmail.ttsai0509.print.dispatcher.PrinterDispatcher;
+import email.com.gmail.ttsai0509.print.printer.Printer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +14,7 @@ import ow.micropos.server.model.orders.ProductEntry;
 import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.repository.menu.MenuItemRepository;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class PrintService {
@@ -69,11 +68,15 @@ public class PrintService {
 
         // Print to each relevant printer
         for (String printer : uniquePrinters) {
-            boolean printChanges = printer.charAt(0) == '@';
-            pd.requestPrint(printer, builder.order(curr, printChanges));
+            boolean changesOnly = printer.charAt(0) != '@';
+            pd.requestPrint(printer, builder.order(curr, changesOnly));
         }
 
         return true;
+    }
+
+    public List<String> getPrinters() {
+        return new ArrayList<>(pd.getPrinters().keySet());
     }
 
 }

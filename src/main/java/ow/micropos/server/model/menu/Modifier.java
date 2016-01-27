@@ -5,6 +5,7 @@ import lombok.Data;
 import ow.micropos.server.model.enums.ModifierType;
 import ow.micropos.server.model.orders.ProductEntry;
 import ow.micropos.server.model.View;
+import ow.micropos.server.model.records.ProductEntryRecord;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -50,7 +51,11 @@ public class Modifier {
     ModifierGroup modifierGroup;
 
     @JsonView(View.ModifierWithProductEntry.class)
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "modifiers")
+    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "modifiers")
     List<ProductEntry> productEntries;
+
+    @JsonView(View.ModifierWithProductEntryRecord.class)
+    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "modifiers")
+    List<ProductEntryRecord> productEntryRecords;
 
 }

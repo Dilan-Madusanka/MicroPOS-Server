@@ -5,6 +5,7 @@ import lombok.Data;
 import ow.micropos.server.model.View;
 import ow.micropos.server.model.enums.ChargeType;
 import ow.micropos.server.model.orders.ChargeEntry;
+import ow.micropos.server.model.records.ChargeEntryRecord;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -48,6 +49,10 @@ public class Charge {
     @JsonView(View.ChargeWithChargeEntry.class)
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "charge")
     List<ChargeEntry> chargeEntries;
+
+    @JsonView(View.ChargeWithChargeEntryRecord.class)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "charge")
+    List<ChargeEntryRecord> chargeEntryRecords;
 
     public boolean hasType(ChargeType type) {
         return getType() == type;

@@ -10,8 +10,16 @@ spring:
     username: micropos
     password: owokfsen
     # Possible fix to connection timeout.
+    initial-size: 5
+    max-active: 10
+    max-idle: 5
+    min-idle: 4
     test-on-borrow: true
+    test-while-idle: true
     validation-query: SELECT 1
+    validation-interval: 30000
+    time-between-eviction-runs-millis: 5000
+    min-evictable-idle-time-millis: 60000
 
   jpa:
     show-sql: false

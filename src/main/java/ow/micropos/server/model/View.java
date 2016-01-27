@@ -20,12 +20,22 @@ public final class View {
     public interface MenuItem {}
     public interface MenuItemWithCategory extends MenuItem, Category {}
     public interface MenuItemWithSalesOrder extends MenuItem, SalesOrder {}
-    public interface MenuItemAll extends MenuItem, MenuItemWithCategory, MenuItemWithSalesOrder {}
+    public interface MenuItemWithSalesOrderRecord extends MenuItem, SalesOrderRecord {}
+    public interface MenuItemAll extends
+            MenuItem,
+            MenuItemWithCategory,
+            MenuItemWithSalesOrder,
+            MenuItemWithSalesOrderRecord {}
 
     public interface Modifier {}
     public interface ModifierWithModifierGroup extends Modifier, ModifierGroup {}
     public interface ModifierWithProductEntry extends Modifier, ProductEntry {}
-    public interface ModifierAll extends Modifier, ModifierWithModifierGroup, ModifierWithProductEntry {}
+    public interface ModifierWithProductEntryRecord extends Modifier, ProductEntryRecord {}
+    public interface ModifierAll extends
+            Modifier,
+            ModifierWithModifierGroup,
+            ModifierWithProductEntry,
+            ModifierWithProductEntryRecord {}
 
     public interface ModifierGroup {}
     public interface ModifierGroupWithModifier extends ModifierGroup, Modifier {}
@@ -38,8 +48,9 @@ public final class View {
      ******************************************************************/
 
     public interface Charge {}
-    public interface ChargeWithChargeEntry extends ChargeEntry {}
-    public interface ChargeAll extends Charge {}
+    public interface ChargeWithChargeEntry extends Charge, ChargeEntry {}
+    public interface ChargeWithChargeEntryRecord extends Charge, ChargeEntryRecord {}
+    public interface ChargeAll extends Charge, ChargeWithChargeEntry, ChargeWithChargeEntryRecord {}
 
     /******************************************************************
      *                                                                *
@@ -50,7 +61,8 @@ public final class View {
     public interface Seat {}
     public interface SeatWithSection extends Seat, Section {}
     public interface SeatWithSalesOrder extends Seat, SalesOrder {}
-    public interface SeatAll extends Seat, SeatWithSection, SeatWithSalesOrder {}
+    public interface SeatWithSalesOrderRecord extends Seat, SalesOrderRecord {}
+    public interface SeatAll extends Seat, SeatWithSection, SeatWithSalesOrder, SeatWithSalesOrderRecord {}
 
     public interface Section {}
     public interface SectionWithSeat extends Section, Seat {}
@@ -69,12 +81,18 @@ public final class View {
 
     public interface Customer {}
     public interface CustomerWithSalesOrder extends Customer, SalesOrder {}
-    public interface CustomerAll extends Customer, CustomerWithSalesOrder {}
+    public interface CustomerWithSalesOrderRecord extends Customer, SalesOrderRecord {}
+    public interface CustomerAll extends Customer, CustomerWithSalesOrder, CustomerWithSalesOrderRecord {}
 
     public interface Employee {}
     public interface EmployeeWithSalesOrder extends Employee, SalesOrder {}
+    public interface EmployeeWithSalesOrderRecord extends Employee, SalesOrderRecord {}
     public interface EmployeeWithPosition extends Employee, Position {}
-    public interface EmployeeAll extends Employee, EmployeeWithSalesOrder, EmployeeWithPosition {}
+    public interface EmployeeAll extends
+            Employee,
+            EmployeeWithSalesOrder,
+            EmployeeWithSalesOrderRecord,
+            EmployeeWithPosition {}
 
     /******************************************************************
      *                                                                *

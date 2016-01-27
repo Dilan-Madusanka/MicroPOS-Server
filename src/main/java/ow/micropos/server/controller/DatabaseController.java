@@ -1,6 +1,7 @@
 package ow.micropos.server.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import email.com.gmail.ttsai0509.print.printer.Printer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ow.micropos.server.model.Permission;
@@ -14,9 +15,11 @@ import ow.micropos.server.model.target.Seat;
 import ow.micropos.server.model.target.Section;
 import ow.micropos.server.service.AuthService;
 import ow.micropos.server.service.DatabaseService;
+import ow.micropos.server.service.PrintService;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/database")
@@ -24,6 +27,20 @@ public class DatabaseController {
 
     @Autowired AuthService authService;
     @Autowired DatabaseService dbService;
+    @Autowired PrintService printService;
+
+    /******************************************************************
+     *                                                                *
+     * Printers (Not really a database item)
+     *                                                                *
+     ******************************************************************/
+
+    public List<String> getPrinters(
+            HttpServletRequest request
+    ) {
+        return printService.getPrinters();
+    }
+
 
     /******************************************************************
      *                                                                *
