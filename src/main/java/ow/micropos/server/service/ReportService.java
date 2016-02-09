@@ -14,17 +14,16 @@ import ow.micropos.server.model.records.ChargeEntryRecord;
 import ow.micropos.server.model.records.PaymentEntryRecord;
 import ow.micropos.server.model.records.ProductEntryRecord;
 import ow.micropos.server.model.records.SalesOrderRecord;
-import ow.micropos.server.model.reports.ActiveSalesReport;
-import ow.micropos.server.model.reports.DaySalesReport;
-import ow.micropos.server.model.reports.SimpleReport;
-import ow.micropos.server.model.reports.Summary;
+import ow.micropos.server.model.reports.MonthlySalesReport;
+import ow.micropos.server.model.reports.SalesReport;
 import ow.micropos.server.repository.orders.SalesOrderRepository;
 import ow.micropos.server.repository.records.SalesOrderRecordRepository;
 
-import javax.annotation.Nonnull;
 import java.math.BigDecimal;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ReportService {
@@ -34,189 +33,113 @@ public class ReportService {
     @Autowired SalesOrderRecordRepository sorRepo;
     @Autowired SalesOrderRepository soRepo;
 
-    @Deprecated
     @Transactional(readOnly = true)
-    public SimpleReport generateSimpleReport(@Nonnull Date start, @Nonnull Date end) {
+    @SuppressWarnings("ConstantConditions")
+    public SalesReport generateSalesReport(Date start, Date end, SalesOrderStatus status, SalesOrderType type) {
 
-        List<SalesOrderRecord> sorList = sorRepo.findByDateBetween(start, end);
-
-        BigDecimal prodTotal = new BigDecimal(0);
-        BigDecimal payTotal = new BigDecimal(0);
-
-        for (SalesOrderRecord sor : sorList) {
-
-            for (ProductEntryRecord prodr : sor.getProductEntryRecords()) {
-                prodTotal = prodTotal.add(prodr.getMenuItem().getPrice());
-                for (Modifier mod : prodr.getModifiers()) {
-                    prodTotal = prodTotal.add(mod.getPrice());
-                }
-            }
-
-            for (PaymentEntryRecord payr : sor.getPaymentEntryRecords()) {
-                payTotal = payTotal.add(payr.getAmount());
-            }
-
+        if (start != null && end == null) {
+            end = DateUtils.endOfDay(start);
+            start = DateUtils.startOfDay(start);
+        } else if (start == null && end != null) {
+            start = DateUtils.startOfDay(end);
+            end = DateUtils.endOfDay(end);
         }
 
-        return new SimpleReport(sorList.size(), payTotal, prodTotal);
+        SalesReport report = new SalesReport(start, end, status, type);
 
-    }
+        if (start == null && end == null && status == null && type == null) {
+            summarizeSalesOrders(report, soRepo.findAll());
 
-    @Transactional(readOnly = true)
-    public ActiveSalesReport generateActiveSalesReport() {
+        } else if (start == null && end == null && status == null && type != null) {
+            summarizeSalesOrders(report, soRepo.findByType(type));
 
-        ActiveSalesReport report = new ActiveSalesReport(new Date());
+        } else if (start == null && end == null && status != null && type == null) {
+            summarizeSalesOrders(report, soRepo.findByStatus(status));
 
-        List<SalesOrder> soList = soRepo.findAll();
-        for (SalesOrder so : soList) {
+        } else if (start == null && end == null && status != null && type != null) {
+            summarizeSalesOrders(report, soRepo.findByStatusAndType(status, type));
 
-            Summary summary;
-            switch (so.getStatus()) {
-                case CLOSED:
-                    summary = report.closedSummary;
-                    break;
-                case OPEN:
-                    summary = report.openSummary;
-                    break;
-                case VOID:
-                    summary = report.voidSummary;
-                    break;
-                default:
-                    continue;
-            }
+        } else if (start != null && end != null && status == null && type == null) {
+            List<SalesOrderRecord> sors = sorRepo.findByDateBetween(start, end);
 
-            switch (so.getType()) {
-                case TAKEOUT:
-                    summary.takeOutCount++;
-                    break;
-                case DINEIN:
-                    summary.dineInCount++;
-                    break;
-            }
+            summarizeSalesOrderRecords(report, sors);
 
-            summary.productCount += so.getProductEntries()
+        } else if (start != null && end != null && status == null && type != null) {
+            List<SalesOrderRecord> sors = sorRepo
+                    .findByDateBetween(start, end)
                     .stream()
-                    .filter(per -> !per.hasStatus(ProductEntryStatus.VOID)
-                            && !per.hasStatus(ProductEntryStatus.REQUEST_VOID)
-                            && !per.hasStatus(ProductEntryStatus.REQUEST_HOLD_VOID))
-                    .count();
+                    .filter(sor -> sor.hasType(type))
+                    .collect(Collectors.toList());
 
-            summary.chargeCount += so.getChargeEntries()
+            summarizeSalesOrderRecords(report, sors);
+
+        } else if (start != null && end != null && status != null && type == null) {
+            List<SalesOrderRecord> sors = sorRepo
+                    .findByDateBetween(start, end)
                     .stream()
-                    .filter(cer -> !cer.hasStatus(ChargeEntryStatus.VOID)
-                            && !cer.hasStatus(ChargeEntryStatus.REQUEST_VOID))
-                    .count();
+                    .filter(sor -> sor.hasStatus(status))
+                    .collect(Collectors.toList());
 
-            summary.paymentCount += so.getPaymentEntries()
+            summarizeSalesOrderRecords(report, sors);
+
+        } else if (start != null && end != null && status != null && type != null) {
+            List<SalesOrderRecord> sors = sorRepo
+                    .findByDateBetween(start, end)
                     .stream()
-                    .filter(per -> !per.hasStatus(PaymentEntryStatus.VOID)
-                            && !per.hasStatus(PaymentEntryStatus.REQUEST_VOID))
-                    .count();
+                    .filter(sor -> sor.hasType(type) && sor.hasStatus(status))
+                    .collect(Collectors.toList());
 
-            summary.gratuityCount += so.hasGratuity() ? 1 : 0;
+            summarizeSalesOrderRecords(report, sors);
 
-            BigDecimal soProductTotal = salesOrderProductEntryTotal(so).max(ZERO_DOLLARS);
-            summary.productTotal = summary.productTotal.add(soProductTotal);
-
-            BigDecimal soChargeTotal = salesOrderChargeTotal(so, soProductTotal);
-            summary.chargeTotal = summary.chargeTotal.add(soChargeTotal);
-
-            BigDecimal soSubTotal = soProductTotal.add(soChargeTotal).max(ZERO_DOLLARS);
-            summary.subTotal = summary.subTotal.add(soSubTotal);
-
-            BigDecimal soTaxTotal = salesOrderTaxTotal(so, soSubTotal).max(ZERO_DOLLARS);
-            summary.taxTotal = summary.taxTotal.add(soTaxTotal);
-
-            BigDecimal soGratuityTotal = salesOrderGratuityTotal(so, soSubTotal).max(ZERO_DOLLARS);
-            summary.gratuityTotal = summary.gratuityTotal.add(soGratuityTotal);
-
-            BigDecimal soGrandTotal = soSubTotal.add(soTaxTotal).add(soGratuityTotal).max(ZERO_DOLLARS);
-            summary.grandTotal = summary.grandTotal.add(soGrandTotal);
-
-            BigDecimal soPaymentTotal = salesOrderPaymentTotal(so).max(ZERO_DOLLARS);
-            summary.paymentTotal = summary.paymentTotal.add(soPaymentTotal);
         }
 
         return report;
+
     }
 
     @Transactional(readOnly = true)
-    public DaySalesReport generateDaySalesReport(int year, int month, int day) {
+    public MonthlySalesReport generateMonthlySalesReport(Date monthOf) {
 
-        Date start = DateUtils.startOf(year, month, day);
-        Date end = DateUtils.endOf(year, month, day);
+        MonthlySalesReport report = new MonthlySalesReport(monthOf);
+        Date start = DateUtils.startOfMonth(monthOf);
+        Date end = DateUtils.endOfMonth(monthOf);
 
-        DaySalesReport report = new DaySalesReport(start, end);
+        Calendar dayStart = Calendar.getInstance();
+        dayStart.setTime(start);
 
-        List<SalesOrderRecord> sorList = sorRepo.findByDateBetween(start, end);
-        for (SalesOrderRecord so : sorList) {
+        Calendar dayEnd = Calendar.getInstance();
+        dayEnd.setTime(DateUtils.endOfDay(dayStart.getTime()));
 
-            Summary summary;
-            switch (so.getStatus()) {
-                case CLOSED:
-                    summary = report.closedSummary;
-                    break;
-                case OPEN:
-                    summary = report.openSummary;
-                    break;
-                case VOID:
-                    summary = report.voidSummary;
-                    break;
-                default:
-                    continue;
+        while (dayStart.getTime().getTime() < end.getTime()) {
+            List<SalesOrderRecord> daySOR = sorRepo
+                    .findByDateBetween(dayStart.getTime(), dayEnd.getTime())
+                    .stream()
+                    .filter(sor -> sor.hasStatus(SalesOrderStatus.CLOSED))
+                    .collect(Collectors.toList());
+
+            BigDecimal daySales = ZERO_DOLLARS;
+            BigDecimal dayTax = ZERO_DOLLARS;
+
+            for (SalesOrderRecord so : daySOR) {
+                BigDecimal soProductTotal = salesOrderRecordProductEntryRecordTotal(so).max(ZERO_DOLLARS);
+                BigDecimal soChargeTotal = salesOrderRecordChargeTotal(so, soProductTotal);
+                BigDecimal soSubTotal = soProductTotal.add(soChargeTotal).max(ZERO_DOLLARS);
+                BigDecimal soTaxTotal = salesOrderRecordTaxTotal(so, soSubTotal).max(ZERO_DOLLARS);
+                BigDecimal soGratuityTotal = salesOrderRecordGratuityTotal(so, soSubTotal).max(ZERO_DOLLARS);
+                BigDecimal soGrandTotal = soSubTotal.add(soTaxTotal).add(soGratuityTotal).max(ZERO_DOLLARS);
+                BigDecimal soNetSales = soGrandTotal.subtract(soGratuityTotal).max(ZERO_DOLLARS);
+
+                daySales = daySales.add(soNetSales).max(ZERO_DOLLARS);
+                dayTax = dayTax.add(soTaxTotal).max(ZERO_DOLLARS);
             }
 
-            switch (so.getType()) {
-                case TAKEOUT:
-                    summary.takeOutCount++;
-                    break;
-                case DINEIN:
-                    summary.dineInCount++;
-                    break;
-            }
+            report.dailySales.add(daySales);
+            report.dailyTax.add(dayTax);
+            report.netSales = report.netSales.add(daySales);
+            report.netTax = report.netTax.add(dayTax);
 
-            summary.productCount += so.getProductEntryRecords()
-                    .stream()
-                    .filter(per -> !per.hasStatus(ProductEntryStatus.VOID)
-                            && !per.hasStatus(ProductEntryStatus.REQUEST_VOID)
-                            && !per.hasStatus(ProductEntryStatus.REQUEST_HOLD_VOID))
-                    .count();
-
-            summary.chargeCount += so.getChargeEntryRecords()
-                    .stream()
-                    .filter(cer -> !cer.hasStatus(ChargeEntryStatus.VOID)
-                            && !cer.hasStatus(ChargeEntryStatus.REQUEST_VOID))
-                    .count();
-
-            summary.paymentCount += so.getPaymentEntryRecords()
-                    .stream()
-                    .filter(per -> !per.hasStatus(PaymentEntryStatus.VOID)
-                            && !per.hasStatus(PaymentEntryStatus.REQUEST_VOID))
-                    .count();
-
-            summary.gratuityCount += so.hasGratuity() ? 1 : 0;
-
-            BigDecimal soProductTotal = salesOrderRecordProductEntryRecordTotal(so).max(ZERO_DOLLARS).add(summary
-                    .productTotal);
-            summary.productTotal = summary.productTotal.add(soProductTotal);
-
-            BigDecimal soChargeTotal = salesOrderRecordChargeTotal(so, soProductTotal);
-            summary.chargeTotal = summary.chargeTotal.add(soChargeTotal);
-
-            BigDecimal soSubTotal = soProductTotal.add(soChargeTotal).max(ZERO_DOLLARS);
-            summary.subTotal = summary.subTotal.add(soSubTotal);
-
-            BigDecimal soTaxTotal = salesOrderRecordTaxTotal(so, soSubTotal).max(ZERO_DOLLARS);
-            summary.taxTotal = summary.taxTotal.add(soTaxTotal);
-
-            BigDecimal soGratuityTotal = salesOrderRecordGratuityTotal(so, soSubTotal).max(ZERO_DOLLARS);
-            summary.gratuityTotal = summary.gratuityTotal.add(soGratuityTotal);
-
-            BigDecimal soGrandTotal = soSubTotal.add(soTaxTotal).add(soGratuityTotal).max(ZERO_DOLLARS);
-            summary.grandTotal = summary.grandTotal.add(soGrandTotal);
-
-            BigDecimal soPaymentTotal = salesOrderRecordPaymentTotal(so).max(ZERO_DOLLARS);
-            summary.paymentTotal = summary.paymentTotal.add(soPaymentTotal);
+            dayStart.add(Calendar.DATE, 1);
+            dayEnd.add(Calendar.DATE, 1);
         }
 
         return report;
@@ -227,6 +150,82 @@ public class ReportService {
      * Sales Order Totals
      *                                                                *
      ******************************************************************/
+
+    private SalesReport summarizeSalesOrders(SalesReport report, List<SalesOrder> sos) {
+
+        report.orderCount = sos.size();
+
+        for (SalesOrder so : sos) {
+
+            report.productCount += so.getProductEntries()
+                    .stream()
+                    .filter(per -> !per.hasStatus(ProductEntryStatus.VOID)
+                            && !per.hasStatus(ProductEntryStatus.REQUEST_VOID)
+                            && !per.hasStatus(ProductEntryStatus.REQUEST_HOLD_VOID))
+                    .count();
+
+            report.chargeCount += so.getChargeEntries()
+                    .stream()
+                    .filter(cer -> !cer.hasStatus(ChargeEntryStatus.VOID)
+                            && !cer.hasStatus(ChargeEntryStatus.REQUEST_VOID))
+                    .count();
+
+            report.paymentCount += so.getPaymentEntries()
+                    .stream()
+                    .filter(per -> !per.hasStatus(PaymentEntryStatus.VOID)
+                            && !per.hasStatus(PaymentEntryStatus.REQUEST_VOID))
+                    .count();
+
+            for (PaymentEntry pe : so.getPaymentEntries()) {
+                if (pe.hasStatus(PaymentEntryStatus.VOID) || pe.hasStatus(PaymentEntryStatus.REQUEST_VOID))
+                    continue;
+
+                switch (pe.getType()) {
+                    case CASH:
+                        report.cashCount++;
+                        report.cashTotal = report.cashTotal.add(pe.getAmount());
+                        break;
+                    case CREDIT:
+                        report.creditCount++;
+                        report.creditTotal = report.creditTotal.add(pe.getAmount());
+                        break;
+                    case CHECK:
+                        report.checkCount++;
+                        report.checkTotal = report.checkTotal.add(pe.getAmount());
+                        break;
+                    case GIFTCARD:
+                        report.giftcardCount++;
+                        report.giftcardTotal = report.giftcardTotal.add(pe.getAmount());
+                        break;
+                }
+            }
+
+            report.gratuityCount += so.hasGratuity() ? 1 : 0;
+
+            BigDecimal soProductTotal = salesOrderProductEntryTotal(so).max(ZERO_DOLLARS);
+            report.productTotal = report.productTotal.add(soProductTotal);
+
+            BigDecimal soChargeTotal = salesOrderChargeTotal(so, soProductTotal);
+            report.chargeTotal = report.chargeTotal.add(soChargeTotal);
+
+            BigDecimal soSubTotal = soProductTotal.add(soChargeTotal).max(ZERO_DOLLARS);
+            report.subTotal = report.subTotal.add(soSubTotal);
+
+            BigDecimal soTaxTotal = salesOrderTaxTotal(so, soSubTotal).max(ZERO_DOLLARS);
+            report.taxTotal = report.taxTotal.add(soTaxTotal);
+
+            BigDecimal soGratuityTotal = salesOrderGratuityTotal(so, soSubTotal).max(ZERO_DOLLARS);
+            report.gratuityTotal = report.gratuityTotal.add(soGratuityTotal);
+
+            BigDecimal soGrandTotal = soSubTotal.add(soTaxTotal).add(soGratuityTotal).max(ZERO_DOLLARS);
+            report.grandTotal = report.grandTotal.add(soGrandTotal);
+
+            BigDecimal soPaymentTotal = salesOrderPaymentTotal(so).max(ZERO_DOLLARS);
+            report.paymentTotal = report.paymentTotal.add(soPaymentTotal);
+        }
+
+        return report;
+    }
 
     private BigDecimal salesOrderPaymentTotal(SalesOrder so) {
         BigDecimal total = BigDecimal.ZERO;
@@ -285,6 +284,82 @@ public class ReportService {
      * Sales Order Record Totals
      *                                                                *
      ******************************************************************/
+
+    private SalesReport summarizeSalesOrderRecords(SalesReport report, List<SalesOrderRecord> sos) {
+
+        report.orderCount = sos.size();
+
+        for (SalesOrderRecord so : sos) {
+
+            report.productCount += so.getProductEntryRecords()
+                    .stream()
+                    .filter(per -> !per.hasStatus(ProductEntryStatus.VOID)
+                            && !per.hasStatus(ProductEntryStatus.REQUEST_VOID)
+                            && !per.hasStatus(ProductEntryStatus.REQUEST_HOLD_VOID))
+                    .count();
+
+            report.chargeCount += so.getChargeEntryRecords()
+                    .stream()
+                    .filter(cer -> !cer.hasStatus(ChargeEntryStatus.VOID)
+                            && !cer.hasStatus(ChargeEntryStatus.REQUEST_VOID))
+                    .count();
+
+            report.paymentCount += so.getPaymentEntryRecords()
+                    .stream()
+                    .filter(per -> !per.hasStatus(PaymentEntryStatus.VOID)
+                            && !per.hasStatus(PaymentEntryStatus.REQUEST_VOID))
+                    .count();
+
+            for (PaymentEntryRecord pe : so.getPaymentEntryRecords()) {
+                if (pe.hasStatus(PaymentEntryStatus.VOID) || pe.hasStatus(PaymentEntryStatus.REQUEST_VOID))
+                    continue;
+
+                switch (pe.getType()) {
+                    case CASH:
+                        report.cashCount++;
+                        report.cashTotal = report.cashTotal.add(pe.getAmount());
+                        break;
+                    case CREDIT:
+                        report.creditCount++;
+                        report.creditTotal = report.creditTotal.add(pe.getAmount());
+                        break;
+                    case CHECK:
+                        report.checkCount++;
+                        report.checkTotal = report.checkTotal.add(pe.getAmount());
+                        break;
+                    case GIFTCARD:
+                        report.giftcardCount++;
+                        report.giftcardTotal = report.giftcardTotal.add(pe.getAmount());
+                        break;
+                }
+            }
+
+            report.gratuityCount += so.hasGratuity() ? 1 : 0;
+
+            BigDecimal soProductTotal = salesOrderRecordProductEntryRecordTotal(so).max(ZERO_DOLLARS);
+            report.productTotal = report.productTotal.add(soProductTotal);
+
+            BigDecimal soChargeTotal = salesOrderRecordChargeTotal(so, soProductTotal);
+            report.chargeTotal = report.chargeTotal.add(soChargeTotal);
+
+            BigDecimal soSubTotal = soProductTotal.add(soChargeTotal).max(ZERO_DOLLARS);
+            report.subTotal = report.subTotal.add(soSubTotal);
+
+            BigDecimal soTaxTotal = salesOrderRecordTaxTotal(so, soSubTotal).max(ZERO_DOLLARS);
+            report.taxTotal = report.taxTotal.add(soTaxTotal);
+
+            BigDecimal soGratuityTotal = salesOrderRecordGratuityTotal(so, soSubTotal).max(ZERO_DOLLARS);
+            report.gratuityTotal = report.gratuityTotal.add(soGratuityTotal);
+
+            BigDecimal soGrandTotal = soSubTotal.add(soTaxTotal).add(soGratuityTotal).max(ZERO_DOLLARS);
+            report.grandTotal = report.grandTotal.add(soGrandTotal);
+
+            BigDecimal soPaymentTotal = salesOrderRecordPaymentTotal(so).max(ZERO_DOLLARS);
+            report.paymentTotal = report.paymentTotal.add(soPaymentTotal);
+        }
+
+        return report;
+    }
 
     private BigDecimal salesOrderRecordPaymentTotal(SalesOrderRecord so) {
         BigDecimal total = BigDecimal.ZERO;

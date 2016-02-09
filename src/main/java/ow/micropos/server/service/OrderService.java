@@ -50,6 +50,8 @@ public class OrderService {
     public long order(Employee employee, SalesOrder currOrder) {
 
         SalesOrder prevOrder = currOrder.getId() == null ? null : soRepo.findOne(currOrder.getId());
+        boolean hasPrev = (prevOrder != null);
+
         // Validation
         validateOrder(employee, prevOrder, currOrder);
 
@@ -57,7 +59,7 @@ public class OrderService {
         soService.saveSalesOrder(currOrder);
 
         // Printing
-        printService.printOrder(currOrder);
+        printService.printOrder2(currOrder, hasPrev);
 
         // Processing
         transitionOrder(currOrder);
@@ -304,11 +306,6 @@ public class OrderService {
                 && currOrder.hasStatus(SalesOrderStatus.REQUEST_VOID)) {
 
             authService.authorize(employee, Permission.VOID_SALES_ORDER);
-
-        } else if (prevOrder.hasStatus(SalesOrderStatus.VOID)
-                && currOrder.hasStatus(SalesOrderStatus.REQUEST_OPEN)) {
-
-            authService.authorize(employee, Permission.REOPEN_SALES_ORDER);
 
         } else if (prevOrder.hasStatus(SalesOrderStatus.OPEN)
                 && currOrder.hasStatus(SalesOrderStatus.REQUEST_VOID)) {

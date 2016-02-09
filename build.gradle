@@ -24,7 +24,7 @@ apply plugin: 'spring-boot'
 // Project Packaging
 jar {
     baseName = 'micropos-server'
-    version = '0.1.0'
+    version = '1.0'
 }
 
 // Project Repositories

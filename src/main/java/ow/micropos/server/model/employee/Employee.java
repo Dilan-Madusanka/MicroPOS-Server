@@ -7,6 +7,7 @@ import ow.micropos.server.model.View;
 import ow.micropos.server.model.auth.Position;
 import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.records.SalesOrderRecord;
+import ow.micropos.server.model.timecard.TimeCardEntry;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -47,6 +48,10 @@ public class Employee {
     @JsonView(View.EmployeeWithSalesOrderRecord.class)
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "employee")
     List<SalesOrderRecord> salesOrderRecords;
+
+    @JsonView(View.EmployeeWithTimeCardEntry.class)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "employee")
+    List<TimeCardEntry> timeCardEntries;
 
     @JsonView(View.EmployeeWithPosition.class)
     @ManyToMany(fetch = FetchType.LAZY)

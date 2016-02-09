@@ -4,6 +4,8 @@
       <w>archivable</w>
       <w>cacheable</w>
       <w>chiao</w>
+      <w>clockin</w>
+      <w>clockout</w>
       <w>dinein</w>
       <w>giftcard</w>
       <w>groupable</w>
@@ -11,6 +13,7 @@
       <w>menuitems</w>
       <w>modifiergroups</w>
       <w>nappa</w>
+      <w>neccessary</w>
       <w>payr</w>
       <w>prng</w>
       <w>prodr</w>

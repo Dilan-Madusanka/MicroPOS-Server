@@ -87,13 +87,25 @@ public final class View {
     public interface Employee {}
     public interface EmployeeWithSalesOrder extends Employee, SalesOrder {}
     public interface EmployeeWithSalesOrderRecord extends Employee, SalesOrderRecord {}
+    public interface EmployeeWithTimeCardEntry extends Employee, TimeCardEntry {}
     public interface EmployeeWithPosition extends Employee, Position {}
     public interface EmployeeAll extends
             Employee,
             EmployeeWithSalesOrder,
             EmployeeWithSalesOrderRecord,
+            EmployeeWithTimeCardEntry,
             EmployeeWithPosition {}
 
+    /******************************************************************
+     *                                                                *
+     * Time Card
+     *                                                                *
+     ******************************************************************/
+
+    public interface TimeCardEntry{}
+    public interface TimeCardEntryWithEmployee extends TimeCardEntry, Employee {}
+    public interface TimeCardEntryAll extends TimeCardEntry, TimeCardEntryWithEmployee {}
+    
     /******************************************************************
      *                                                                *
      * Authorization
@@ -162,14 +174,6 @@ public final class View {
             SalesOrderRecordEmployee,
             SalesOrderRecordTarget,
             SalesOrderRecordDetails {}
-
-    /******************************************************************
-     *                                                                *
-     * Reporting
-     *                                                                *
-     ******************************************************************/
-
-    public interface SimpleReport {}
 
 }
 //@formatter:on

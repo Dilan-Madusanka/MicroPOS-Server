@@ -9,14 +9,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.text.SimpleDateFormat;
 
 @RestController
 @RequestMapping(value = "")
 public class ResourceController {
 
     private final String filesPath = System.getProperty("user.dir") + "/public";
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy");
 
     @ResponseBody
     @RequestMapping(value = "/md5/{file:.+}", method = RequestMethod.GET)
@@ -52,14 +50,14 @@ public class ResourceController {
         switch (file) {
             case "micropos.bat":
                 output = "@echo off \n" +
-                        "curl.exe -sS " + url + "/file/client.jar --output client.jar\n" +
-                        "java -jar client.jar --url=" + url;
+                        "curl.exe -sS " + url + "/file/micropos-client-1.0.jar --output micropos-client-1.0.jar\n" +
+                        "java -jar micropos-client-1.0.jar --url=" + url;
                 break;
 
             case "micropos32.bat":
                 output = "@echo off \n" +
-                        "curl32.exe -sS " + url + "/file/client.jar --output client.jar\n" +
-                        "java -jar client.jar --url=" + url + "\n";
+                        "curl32.exe -sS " + url + "/file/micropos-client-1.0.jar --output micropos-client-1.0.jar\n" +
+                        "java -jar micropos-client-1.0.jar --url=" + url + "\n";
                 break;
 
             default:

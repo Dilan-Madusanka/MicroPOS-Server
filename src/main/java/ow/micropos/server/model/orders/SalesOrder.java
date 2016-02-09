@@ -11,7 +11,6 @@ import ow.micropos.server.model.View;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -45,6 +44,9 @@ public class SalesOrder {
     @Enumerated(EnumType.ORDINAL)
     @JsonView(View.SalesOrder.class)
     SalesOrderStatus status;
+
+    @JsonView(View.SalesOrder.class)
+    Date cookTime;
 
     @JsonView(View.SalesOrderDetails.class)
     BigDecimal taxPercent;
@@ -120,6 +122,14 @@ public class SalesOrder {
         this.status = status;
     }
 
+    public Date getCookTime() {
+        return cookTime;
+    }
+
+    public void setCookTime(Date cookTime) {
+        this.cookTime = cookTime;
+    }
+
     public BigDecimal getTaxPercent() {
         return taxPercent;
     }
@@ -162,6 +172,13 @@ public class SalesOrder {
 
     public boolean hasStatus(SalesOrderStatus status) {
         return getStatus() == status;
+    }
+
+    public boolean hasStatuses(SalesOrderStatus... statuses) {
+        for (SalesOrderStatus status : statuses)
+            if (this.status == status)
+                return true;
+        return false;
     }
 
     public boolean hasType(SalesOrderType type) {
