@@ -103,4 +103,11 @@ public class ProductEntry {
         return getStatus() == status;
     }
 
+    public boolean hasStatuses(ProductEntryStatus... statuses) {
+        for (ProductEntryStatus status : statuses)
+            if (this.status == status)
+                return true;
+        return false;
+    }
+
 }

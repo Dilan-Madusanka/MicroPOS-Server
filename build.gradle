@@ -56,3 +56,40 @@ dependencies {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.3'
 }
+
+// Deployment Task
+task fullDeployFiles(dependsOn: ['assemble', ':client:fatJar']) << {
+    copy {
+        from 'server-start.bat'
+        from 'server-restore.bat'
+        from 'server-backup.bat'
+        into 'deploy'
+
+    }
+    copy {
+        from 'build/libs/micropos-server-1.0.jar'
+        from 'rxtxSerial.dll'
+        from 'printer.properties'
+        from 'mysql.exe'
+        from 'mysqldump.exe'
+        into 'deploy/micropos'
+    }
+    copy {
+        from 'backup'
+        into 'deploy/micropos/backup'
+    }
+    copy {
+        from 'timecard'
+        into 'deploy/micropos/timecard'
+    }
+    copy {
+        from project(':client').file('build/libs/micropos-client-1.0.jar')
+        from 'public'
+        into 'deploy/micropos/public'
+    }
+}
+
+task fullDeployZip(type: Zip, dependsOn: 'fullDeployFiles') {
+    from 'deploy'
+    baseName = 'MicroPOS-Deployable'
+}

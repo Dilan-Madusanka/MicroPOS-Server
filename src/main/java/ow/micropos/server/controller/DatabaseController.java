@@ -13,11 +13,14 @@ import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.model.target.Customer;
 import ow.micropos.server.model.target.Seat;
 import ow.micropos.server.model.target.Section;
+import ow.micropos.server.model.timecard.TimeCardEntry;
 import ow.micropos.server.service.AuthService;
 import ow.micropos.server.service.DatabaseService;
 import ow.micropos.server.service.PrintService;
+import ow.micropos.server.service.TimeCardService;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +31,7 @@ public class DatabaseController {
     @Autowired AuthService authService;
     @Autowired DatabaseService dbService;
     @Autowired PrintService printService;
+    @Autowired TimeCardService tcService;
 
     /******************************************************************
      *                                                                *
@@ -489,6 +493,70 @@ public class DatabaseController {
         authService.authorize(request, Permission.DB_CHARGES);
 
         return dbService.removeCharge(id);
+
+    }
+
+    /******************************************************************
+     *                                                                *
+     * TimeCardEntries
+     *                                                                *
+     ******************************************************************/
+
+    @JsonView(value = View.TimeCardEntryWithEmployee.class)
+    @RequestMapping(value = "/timeCardEntries", method = RequestMethod.GET)
+    public List<TimeCardEntry> getTimeCardEntries(
+            HttpServletRequest request,
+            @RequestParam(value = "employee", required = false) Long id,
+            @RequestParam(value = "start", required = false) Date start,
+            @RequestParam(value = "end", required = false) Date end
+
+    ) {
+
+        authService.authorize(request, Permission.DB_TIME_CARD_ENTRIES);
+
+        if ((start == null && end == null) || (start != null && end != null && !start.before(end))) {
+            if (id == null)
+                return tcService.getTimeCardEntries();
+            else
+                return tcService.getTimeCardEntries(id);
+        } else {
+            if (id == null)
+                return tcService.getTimeCardEntries(start, end);
+            else
+                return tcService.getTimeCardEntries(id, start, end);
+
+        }
+
+    }
+
+    @RequestMapping(value = "/timeCardEntries", method = RequestMethod.POST)
+    public long updateTimeCardEntries(
+            HttpServletRequest request,
+            @RequestBody(required = true) TimeCardEntry entry
+    ) {
+
+        Employee verifier = authService.authorize(request, Permission.DB_TIME_CARD_ENTRIES);
+
+        Long id = entry.getId();
+
+        if (id == null)
+            id = tcService.verifiedEntry(entry.getEmployee(), entry.isClockin(), entry.getDate(), verifier).getId();
+        else
+            id = tcService.updateEntry(id, entry.getDate(), verifier).getId();
+
+        return id;
+
+    }
+
+    @RequestMapping(value = "/timeCardEntries/{id}", method = RequestMethod.DELETE)
+    public boolean removeTimeCardEntries(
+            HttpServletRequest request,
+            @PathVariable("id") long id
+    ) {
+
+        Employee verifier = authService.authorize(request, Permission.DB_TIME_CARD_ENTRIES);
+
+        return tcService.archiveEntry(id, verifier);
 
     }
 

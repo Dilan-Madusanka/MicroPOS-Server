@@ -1,2 +1,4 @@
 rootProject.name = 'MicroPOS Server'
 
+include ":client"
+project(":client").projectDir = file("../MicroPOS-Client")

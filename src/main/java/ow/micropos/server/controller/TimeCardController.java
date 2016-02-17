@@ -23,14 +23,14 @@ public class TimeCardController {
     @Autowired TimeCardService tcService;
 
     @JsonView(value = View.TimeCardEntry.class)
-    @RequestMapping(value = "", method = RequestMethod.GET)
+    @RequestMapping(value = "/view", method = RequestMethod.GET)
     public List<TimeCardEntry> getTimeCard(@RequestParam(value = "pin", required = true) String pin) {
 
         Employee employee = genService.getEmployee(pin);
 
         authService.authorize(employee, Permission.VIEW_TIME_CARD);
 
-        return tcService.getTimeCardEntries(employee);
+        return tcService.getTimeCardEntries(employee.getId());
 
     }
 
@@ -61,36 +61,6 @@ public class TimeCardController {
         authService.authorize(employee, Permission.CLOCK_OUT);
 
         return tcService.standardEntry(employee, img, false);
-
-    }
-
-    @JsonView(value = View.TimeCardEntry.class)
-    @RequestMapping(value = "/create", method = RequestMethod.POST)
-    public TimeCardEntry createEntry(HttpServletRequest request, @RequestBody(required = true) TimeCardEntry entry) {
-
-        Employee verifier = authService.authorize(request, Permission.TIME_CARD_CREATE);
-
-        return tcService.verifiedEntry(entry.getEmployee(), entry.isClockin(), entry.getDate(), verifier);
-
-    }
-
-    @JsonView(value = View.TimeCardEntry.class)
-    @RequestMapping(value = "/update", method = RequestMethod.POST)
-    public TimeCardEntry updateEntry(HttpServletRequest request, @RequestBody(required = true) TimeCardEntry entry) {
-
-        Employee verifier = authService.authorize(request, Permission.TIME_CARD_UPDATE);
-
-        return tcService.updateEntry(entry.getId(), entry.getDate(), verifier);
-
-    }
-
-    @JsonView(value = View.TimeCardEntry.class)
-    @RequestMapping(value = "/remove", method = RequestMethod.DELETE)
-    public boolean removeEntry(HttpServletRequest request, @RequestParam(value = "id") long id) {
-
-        Employee verifier = authService.authorize(request, Permission.TIME_CARD_DELETE);
-
-        return tcService.archiveEntry(id, verifier);
 
     }
 

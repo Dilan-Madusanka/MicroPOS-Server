@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/MicroPOS Server.iml" filepath="$PROJECT_DIR$/MicroPOS Server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../MicroPOS-Client/client.iml" filepath="$PROJECT_DIR$/../MicroPOS-Client/client.iml" />
     </modules>
   </component>
 </project>

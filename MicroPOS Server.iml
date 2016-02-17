@@ -52,7 +52,6 @@
     <orderEntry type="library" exported="" name="Gradle: org.apache.tomcat.embed:tomcat-embed-el:8.0.23" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.tomcat.embed:tomcat-embed-logging-juli:8.0.23" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.apache.tomcat.embed:tomcat-embed-websocket:8.0.23" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: com.fasterxml.jackson.core:jackson-core:2.4.6" level="project" />
     <orderEntry type="library" exported="" name="Gradle: javax.validation:validation-api:1.1.0.Final" level="project" />
     <orderEntry type="library" exported="" name="Gradle: com.fasterxml:classmate:1.0.0" level="project" />
     <orderEntry type="library" exported="" name="Gradle: org.springframework:spring-aop:4.1.6.RELEASE" level="project" />
@@ -113,6 +112,8 @@
           <root url="jar://$MODULE_DIR$/libs/rxtx-2.2/RXTXcomm.jar!/" />
           <root url="jar://$MODULE_DIR$/libs/rxtx-2.2/RXTXcomm.jar!/" />
           <root url="jar://$MODULE_DIR$/libs/rxtx-2.2/RXTXcomm.jar!/" />
+          <root url="jar://$MODULE_DIR$/libs/rxtx-2.2/RXTXcomm.jar!/" />
+          <root url="jar://$MODULE_DIR$/libs/rxtx-2.2/RXTXcomm.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -124,11 +125,15 @@
           <root url="jar://$MODULE_DIR$/libs/EscPos-0.1.jar!/" />
           <root url="jar://$MODULE_DIR$/libs/EscPos-0.1.jar!/" />
           <root url="jar://$MODULE_DIR$/libs/EscPos-0.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/libs/EscPos-0.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/libs/EscPos-0.1.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
       </library>
     </orderEntry>
     <orderEntry type="library" exported="" name="Gradle: mysql:mysql-connector-java:5.1.38" level="project" />
+    <orderEntry type="module" module-name="client" exported="" />
+    <orderEntry type="library" exported="" name="Gradle: com.fasterxml.jackson.core:jackson-core:2.4.6" level="project" />
   </component>
 </module>

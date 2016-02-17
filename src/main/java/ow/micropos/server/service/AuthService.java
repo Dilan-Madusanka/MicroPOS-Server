@@ -1,6 +1,7 @@
 package ow.micropos.server.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ow.micropos.server.exception.UserPermissionException;
@@ -15,7 +16,8 @@ public class AuthService {
 
     @Autowired GeneralService generalService;
 
-    public static final String HEADER = "MicroPOS-Pin";
+    @Value("${micropos.auth.header}")
+    private String header;
 
     /***************************************************************************
      *                                                                         *
@@ -38,7 +40,7 @@ public class AuthService {
         String pin;
 
         try {
-            pin = request.getHeader(HEADER);
+            pin = request.getHeader(header);
         } catch (Exception e) {
             System.out.println("Defaulting to Guest");
             pin = "0";

@@ -148,6 +148,11 @@ public class WokPrintJobBuilder {
 
     // Prints a closing SalesOrder (notify change if already exists, otherwise print as new order)
     private byte[] _closedSalesOrder(SalesOrder so, boolean requestsOnly, boolean hasPrev) {
+
+        if (so.getProductEntries().stream().allMatch(
+                pe -> pe.hasStatuses(ProductEntryStatus.VOID, ProductEntryStatus.HOLD, ProductEntryStatus.SENT)))
+            return new byte[0];
+
         return hasPrev ? _changedSalesOrder(so, requestsOnly) : _newSalesOrder(so, requestsOnly);
     }
 

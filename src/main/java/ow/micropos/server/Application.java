@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import email.com.gmail.ttsai0509.escpos.com.ComUtils;
 import email.com.gmail.ttsai0509.print.dispatcher.PrinterDispatcher;
 import email.com.gmail.ttsai0509.print.dispatcher.PrinterDispatcherAsync;
+import email.com.gmail.ttsai0509.print.printer.PrintJob;
 import email.com.gmail.ttsai0509.print.printer.RawPrinter;
+import email.com.gmail.ttsai0509.print.printer.exception.PrinterException;
 import email.com.gmail.ttsai0509.utils.LoggerOutputStream;
 import email.com.gmail.ttsai0509.utils.NullOutputStream;
 import email.com.gmail.ttsai0509.utils.PrinterConfig;
@@ -25,6 +27,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import ow.micropos.server.custom.WokPrintJobBuilder;
 import ow.micropos.server.model.auth.Position;
 import ow.micropos.server.model.employee.Employee;
@@ -42,22 +45,18 @@ import ow.micropos.server.repository.target.SectionRepository;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.file.CopyOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 // @SpringBootApplication
 // IntelliJ IDEA 14.0.3 does not properly handle annotation.
 // We must manually declare each sub-annotation to avoid
 // autowiring problems.
-
 @Configuration
+@EnableScheduling
 @EnableAutoConfiguration
 @EnableJpaRepositories
 @ComponentScan
@@ -134,7 +133,8 @@ public class Application {
     public static void main(String[] args) {
         ConfigurableApplicationContext context = SpringApplication.run(Application.class);
 
-        context.getBean(Application.class).reset();
+        // Development only. From now on, modify backup file and restore externally.
+        //context.getBean(Application.class).reset();
 
         try {
             log.info("MicroPOS Server Host Address : " + InetAddress.getLocalHost().getHostAddress());
@@ -152,8 +152,9 @@ public class Application {
 
     /******************************************************************
      *                                                                *
-     * For use with create-drop auto-ddl. Automatically load defaults *
-     * for testing.                                                   *
+     * For use with create-drop ddl-auto. Automatically load defaults *
+     * for testing. For production, we switch to ddl-auto validate    *
+     * and use server-restore.bat to init database.                   *
      *                                                                *
      ******************************************************************/
 
@@ -193,3 +194,4 @@ public class Application {
     }
 
 }
+

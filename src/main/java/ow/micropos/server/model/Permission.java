@@ -102,6 +102,7 @@ public enum Permission {
     DB_SECTIONS,
     DB_CUSTOMERS,
     DB_CHARGES,
+    DB_TIME_CARD_ENTRIES,
 
     /******************************************************************
      *                                                                *
