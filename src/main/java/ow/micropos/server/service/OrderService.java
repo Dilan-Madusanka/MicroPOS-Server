@@ -59,7 +59,7 @@ public class OrderService {
         soService.saveSalesOrder(currOrder);
 
         // Printing
-        printService.printOrder2(currOrder, hasPrev);
+        printService.printOrder(currOrder, hasPrev);
 
         // Processing
         transitionOrder(currOrder);

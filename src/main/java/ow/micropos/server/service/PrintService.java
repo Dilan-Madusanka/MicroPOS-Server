@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class PrintService {
@@ -29,17 +30,138 @@ public class PrintService {
     @Autowired PrinterDispatcher pd;
     @Autowired WokPrintJobBuilder builder;
 
+    public List<String> getPrinters() {
+        return new ArrayList<>(pd.getPrinters().keySet());
+    }
+
+    public List<String> getPrintersFor(ProductEntry pe) {
+        long peId = pe.getMenuItem().getId();
+        return miRepo.findOne(peId).getPrinters();
+    }
+
+    @SuppressWarnings("Convert2MethodRef")
+    public boolean printOrder(SalesOrder curr, boolean hasPrev) {
+
+        boolean printed = false;
+
+        for (String printer : getPrinters()) {
+
+            String notification;
+            boolean suppressAddPrefix;
+
+            // ! printers do not print TAKEOUT
+            if (curr.hasType(SalesOrderType.TAKEOUT) && printer.contains("!")) {
+                continue;
+
+                // @ printers do not print DINEIN
+            } else if (curr.hasType(SalesOrderType.DINEIN) && printer.contains("@")) {
+                continue;
+
+                // REQUEST_OPEN orders with previous instance are being reopened (can't be changed)
+            } else if (curr.hasStatus(SalesOrderStatus.REQUEST_OPEN) && hasPrev) {
+                continue;
+
+                // REQUEST_OPEN orders without previous instances are new orders
+            } else if (curr.hasStatus(SalesOrderStatus.REQUEST_OPEN) && !hasPrev) {
+                notification = "NEW ORDER";
+                suppressAddPrefix = true;
+
+                // REQUEST_CLOSE orders without previous instances are new orders that are also being closed
+            } else if (curr.hasStatus(SalesOrderStatus.REQUEST_CLOSE) && !hasPrev) {
+                notification = "NEW ORDER";
+                suppressAddPrefix = true;
+
+                // REQUEST_CLOSE orders with previous instances are closing orders with possible changes
+            } else if (curr.hasStatus(SalesOrderStatus.REQUEST_CLOSE) && hasPrev) {
+                notification = "CHANGED ORDER";
+                suppressAddPrefix = false;
+
+                // OPEN orders indicate a previous order has changed
+            } else if (curr.hasStatus(SalesOrderStatus.OPEN)) {
+                notification = "CHANGED ORDER";
+                suppressAddPrefix = false;
+
+                // REQUEST_VOID orders means all items should be voided
+            } else if (curr.hasStatus(SalesOrderStatus.REQUEST_VOID)) {
+                notification = "VOID ORDER";
+                suppressAddPrefix = false;
+
+                // Everything else is skipped
+            } else {
+                continue;
+
+            }
+
+            boolean printSent = printer.contains("#");
+            List<ProductEntry> printEntries = curr.getProductEntries()
+                    .stream()
+                    .filter(pe -> getPrintersFor(pe).contains(printer))
+                    .filter(pe -> pe.hasPrintableStatus())
+                    .filter(pe -> !pe.hasStatus(ProductEntryStatus.SENT) || printSent)
+                    .collect(Collectors.toList());
+
+            if (printEntries.isEmpty())
+                continue;
+
+            SalesOrder printable = new SalesOrder();
+            printable.setId(curr.getId());
+            printable.setProductEntries(printEntries);
+            printable.setCookTime(curr.getCookTime());
+            printable.setCustomer(curr.getCustomer());
+            printable.setEmployee(curr.getEmployee());
+            printable.setSeat(curr.getSeat());
+            printable.setType(curr.getType());
+            printable.setStatus(curr.getStatus());
+            printable.setGratuityPercent(curr.getGratuityPercent());
+            printable.setTaxPercent(curr.getTaxPercent());
+            printable.setDate(curr.getDate());
+            pd.requestPrint(printer, builder.order(printable, notification, suppressAddPrefix));
+
+            printed = true;
+
+        }
+
+        return printed;
+
+    }
+
+    @Deprecated
+    // PrintJob builder printing empty tickets
     public boolean printOrder2(SalesOrder curr, boolean hasPrev) {
 
         boolean printed = false;
 
         for (String printer : getPrinters()) {
 
-            SalesOrder order = prepareForPrinter(curr, printer);
-
-            // Order does not satisfy conditions to print to printer
-            if (order == null)
+            if (!curr.hasStatuses(
+                    SalesOrderStatus.OPEN, SalesOrderStatus.REQUEST_OPEN,
+                    SalesOrderStatus.REQUEST_CLOSE, SalesOrderStatus.REQUEST_VOID))
                 continue;
+
+            List<ProductEntry> productEntries = new ArrayList<>();
+
+            for (ProductEntry pe : curr.getProductEntries()) {
+                long peId = pe.getMenuItem().getId();
+                List<String> printers = miRepo.findOne(peId).getPrinters();
+                if (printers.contains(printer))
+                    productEntries.add(pe);
+            }
+
+            if (productEntries.isEmpty())
+                continue;
+
+            SalesOrder so = new SalesOrder();
+            so.setId(curr.getId());
+            so.setProductEntries(productEntries);
+            so.setCookTime(curr.getCookTime());
+            so.setCustomer(curr.getCustomer());
+            so.setEmployee(curr.getEmployee());
+            so.setSeat(curr.getSeat());
+            so.setType(curr.getType());
+            so.setStatus(curr.getStatus());
+            so.setGratuityPercent(curr.getGratuityPercent());
+            so.setTaxPercent(curr.getTaxPercent());
+            so.setDate(curr.getDate());
 
             // (!) - Do not print TAKE OUT orders
             if (printer.contains("!") && curr.hasType(SalesOrderType.TAKEOUT))
@@ -51,7 +173,7 @@ public class PrintService {
 
             // (#) - Print entire order
             boolean requestsOnly = !printer.contains("#");
-            pd.requestPrint(printer, builder.order(order, requestsOnly, hasPrev));
+            pd.requestPrint(printer, builder.order(so, requestsOnly, hasPrev));
 
             printed = true;
 
@@ -63,7 +185,7 @@ public class PrintService {
 
     @Deprecated
     // PrintJob builder does not re-filter entries by printer.
-    public boolean printOrder(SalesOrder curr, boolean hasPrev) {
+    public boolean printOrder1(SalesOrder curr, boolean hasPrev) {
 
         // Collect all relevant printers
         Set<String> uniquePrinters = new HashSet<>();
@@ -125,47 +247,6 @@ public class PrintService {
         }
 
         return true;
-    }
-
-    public List<String> getPrinters() {
-        return new ArrayList<>(pd.getPrinters().keySet());
-    }
-
-    private SalesOrder prepareForPrinter(SalesOrder order, String printer) {
-
-        if (!order.hasStatuses(
-                SalesOrderStatus.OPEN, SalesOrderStatus.REQUEST_OPEN,
-                SalesOrderStatus.REQUEST_CLOSE, SalesOrderStatus.REQUEST_VOID))
-            return null;
-
-        List<ProductEntry> productEntries = new ArrayList<>();
-
-        for (ProductEntry pe : order.getProductEntries()) {
-            long peId = pe.getMenuItem().getId();
-            List<String> printers = miRepo.findOne(peId).getPrinters();
-            if (printers.contains(printer))
-                productEntries.add(pe);
-        }
-
-        if (productEntries.isEmpty())
-            return null;
-
-        SalesOrder so = new SalesOrder();
-        so.setId(order.getId());
-        so.setProductEntries(productEntries);
-        so.setCookTime(order.getCookTime());
-        so.setCustomer(order.getCustomer());
-        so.setEmployee(order.getEmployee());
-        so.setSeat(order.getSeat());
-        so.setType(order.getType());
-        so.setStatus(order.getStatus());
-        so.setGratuityPercent(order.getGratuityPercent());
-        so.setTaxPercent(order.getTaxPercent());
-        so.setDate(order.getDate());
-
-        return so;
-
-
     }
 
 }

@@ -68,6 +68,7 @@ task fullDeployFiles(dependsOn: ['assemble', ':client:fatJar']) << {
     }
     copy {
         from 'build/libs/micropos-server-1.0.jar'
+        from 'application.yml'
         from 'rxtxSerial.dll'
         from 'printer.properties'
         from 'mysql.exe'

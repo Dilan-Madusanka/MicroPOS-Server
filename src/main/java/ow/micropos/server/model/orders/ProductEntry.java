@@ -110,4 +110,13 @@ public class ProductEntry {
         return false;
     }
 
+    public boolean hasPrintableStatus() {
+        return hasStatuses(
+                ProductEntryStatus.SENT,
+                ProductEntryStatus.REQUEST_EDIT,
+                ProductEntryStatus.REQUEST_SENT,
+                ProductEntryStatus.REQUEST_VOID
+        );
+    }
+
 }
