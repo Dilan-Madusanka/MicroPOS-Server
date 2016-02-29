@@ -57,9 +57,11 @@ public class MigrationService {
         List<SalesOrderRecord> sorList = soList.stream().map(SalesOrderRecord::new).collect(Collectors.toList());
 
         // Persist Complete Sales Order Records
+        long index = 1;
         for (SalesOrderRecord sor : sorList) {
 
             sor.setId(null);
+            sor.setIdx(index);
             sorRepo.save(sor);
 
             for (ChargeEntryRecord chr : sor.getChargeEntryRecords()) {
@@ -79,6 +81,8 @@ public class MigrationService {
                 prodr.setSalesOrderRecord(sor);
                 prodrRepo.save(prodr);
             }
+
+            index++;
 
         }
 

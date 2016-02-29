@@ -58,7 +58,11 @@ task wrapper(type: Wrapper) {
 }
 
 // Deployment Task
-task fullDeployFiles(dependsOn: ['assemble', ':client:fatJar']) << {
+task cleanDeployFiles(type: Delete) {
+    delete 'deploy'
+}
+
+task makeDeployFiles(dependsOn: ['assemble', ':client:fatJar']) << {
     copy {
         from 'server-start.bat'
         from 'server-restore.bat'
@@ -90,7 +94,7 @@ task fullDeployFiles(dependsOn: ['assemble', ':client:fatJar']) << {
     }
 }
 
-task fullDeployZip(type: Zip, dependsOn: 'fullDeployFiles') {
+task deployableZip(type: Zip, dependsOn: ['cleanDeployFiles', 'makeDeployFiles']) {
     from 'deploy'
     baseName = 'MicroPOS-Deployable'
 }

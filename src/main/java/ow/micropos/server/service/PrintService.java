@@ -14,16 +14,16 @@ import ow.micropos.server.model.orders.ProductEntry;
 import ow.micropos.server.model.orders.SalesOrder;
 import ow.micropos.server.repository.menu.MenuItemRepository;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class PrintService {
 
     private static final Logger log = LoggerFactory.getLogger(PrintService.class);
+    private static final Pattern tagPattern = Pattern.compile("([^\\d]*)(\\d+)");
 
     @Autowired ObjectViewMapper mapper;
     @Autowired MenuItemRepository miRepo;
@@ -46,58 +46,74 @@ public class PrintService {
 
         for (String printer : getPrinters()) {
 
-            String notification;
-            boolean suppressAddPrefix;
+            String notification;        // Ticket Header
+            boolean suppressAddPrefix;  // Hide *A prefix on new orders
+            boolean voidOverride;       // Force *V prefix on all entries
 
-            // ! printers do not print TAKEOUT
             if (curr.hasType(SalesOrderType.TAKEOUT) && printer.contains("!")) {
+                // ! printers do not print TAKEOUT
                 continue;
 
-                // @ printers do not print DINEIN
             } else if (curr.hasType(SalesOrderType.DINEIN) && printer.contains("@")) {
+                // @ printers do not print DINEIN
                 continue;
 
-                // REQUEST_OPEN orders with previous instance are being reopened (can't be changed)
             } else if (curr.hasStatus(SalesOrderStatus.REQUEST_OPEN) && hasPrev) {
+                // REQUEST_OPEN orders with previous instance are being reopened (can't be changed)
                 continue;
 
-                // REQUEST_OPEN orders without previous instances are new orders
             } else if (curr.hasStatus(SalesOrderStatus.REQUEST_OPEN) && !hasPrev) {
+                // REQUEST_OPEN orders without previous instances are new orders
                 notification = "NEW ORDER";
                 suppressAddPrefix = true;
+                voidOverride = false;
 
-                // REQUEST_CLOSE orders without previous instances are new orders that are also being closed
             } else if (curr.hasStatus(SalesOrderStatus.REQUEST_CLOSE) && !hasPrev) {
+                // REQUEST_CLOSE orders without previous instances are new orders that are also being closed
                 notification = "NEW ORDER";
                 suppressAddPrefix = true;
+                voidOverride = false;
 
-                // REQUEST_CLOSE orders with previous instances are closing orders with possible changes
             } else if (curr.hasStatus(SalesOrderStatus.REQUEST_CLOSE) && hasPrev) {
+                // REQUEST_CLOSE orders with previous instances are closing orders with possible changes
                 notification = "CHANGED ORDER";
                 suppressAddPrefix = false;
+                voidOverride = false;
 
-                // OPEN orders indicate a previous order has changed
+                /* >>> HACK - prevent printing unchanged closed orders to @#tg */
+                boolean hasPrintableRequest = false;
+                for (ProductEntry pe : curr.getProductEntries())
+                    if (pe.hasPrintableStatus() && !pe.hasStatus(ProductEntryStatus.SENT))
+                        hasPrintableRequest = true;
+                if (!hasPrintableRequest)
+                    continue;
+                // <<< HACK - prevent printing unchanged closed orders to @#tg */
+
             } else if (curr.hasStatus(SalesOrderStatus.OPEN)) {
+                // OPEN orders indicate a previous order has changed
                 notification = "CHANGED ORDER";
                 suppressAddPrefix = false;
+                voidOverride = false;
 
-                // REQUEST_VOID orders means all items should be voided
             } else if (curr.hasStatus(SalesOrderStatus.REQUEST_VOID)) {
+                // REQUEST_VOID orders means all items should be voided
                 notification = "VOID ORDER";
                 suppressAddPrefix = false;
+                voidOverride = true;
 
-                // Everything else is skipped
             } else {
+                // Everything else is skipped
                 continue;
 
             }
 
-            boolean printSent = printer.contains("#");
+            boolean printSent = printer.contains("#") || voidOverride;
             List<ProductEntry> printEntries = curr.getProductEntries()
                     .stream()
                     .filter(pe -> getPrintersFor(pe).contains(printer))
                     .filter(pe -> pe.hasPrintableStatus())
                     .filter(pe -> !pe.hasStatus(ProductEntryStatus.SENT) || printSent)
+                    .sorted(peComparator)
                     .collect(Collectors.toList());
 
             if (printEntries.isEmpty())
@@ -115,7 +131,7 @@ public class PrintService {
             printable.setGratuityPercent(curr.getGratuityPercent());
             printable.setTaxPercent(curr.getTaxPercent());
             printable.setDate(curr.getDate());
-            pd.requestPrint(printer, builder.order(printable, notification, suppressAddPrefix));
+            pd.requestPrint(printer, builder.order(printable, notification, suppressAddPrefix, voidOverride));
 
             printed = true;
 
@@ -125,128 +141,67 @@ public class PrintService {
 
     }
 
-    @Deprecated
-    // PrintJob builder printing empty tickets
-    public boolean printOrder2(SalesOrder curr, boolean hasPrev) {
+    /**
+     * ***************************************************************
+     * *
+     * Product Entry Sorting
+     * *
+     * ****************************************************************
+     */
 
-        boolean printed = false;
+    // ProductEntry rank moves changes to the top of the ticket.
+    private int getRank(ProductEntry pe) {
+        switch (pe.getStatus()) {
+            case REQUEST_VOID:
+                return 1;
+            case REQUEST_EDIT:
+                return 2;
+            case REQUEST_SENT:
+                return 3;
+            case SENT:
+                return 4;
+            default:
+                return 5;
+        }
+    }
 
-        for (String printer : getPrinters()) {
+    // Order tags alphabetically by prefix, then numerically by suffix.
+    // If invalid format, order lexicographically.
+    // A1 < A5 < A10 < B1 < B5 < B10 < C1 < CA1 < CZ1
+    private final Comparator<String> tagComparator = (o1, o2) -> {
+        Matcher matcher1 = tagPattern.matcher(o1);
+        Matcher matcher2 = tagPattern.matcher(o2);
 
-            if (!curr.hasStatuses(
-                    SalesOrderStatus.OPEN, SalesOrderStatus.REQUEST_OPEN,
-                    SalesOrderStatus.REQUEST_CLOSE, SalesOrderStatus.REQUEST_VOID))
-                continue;
+        if (matcher1.find() && matcher2.find()) {
 
-            List<ProductEntry> productEntries = new ArrayList<>();
-
-            for (ProductEntry pe : curr.getProductEntries()) {
-                long peId = pe.getMenuItem().getId();
-                List<String> printers = miRepo.findOne(peId).getPrinters();
-                if (printers.contains(printer))
-                    productEntries.add(pe);
+            String o1Txt = matcher1.group(1);
+            String o2Txt = matcher2.group(1);
+            if (!o1Txt.equals(o2Txt)) {
+                return o1Txt.compareTo(o2Txt);
             }
 
-            if (productEntries.isEmpty())
-                continue;
+            String o1Val = matcher1.group(2);
+            String o2Val = matcher2.group(2);
+            try {
+                return Integer.parseInt(o1Val) - Integer.parseInt(o2Val);
+            } catch (NumberFormatException e) {
+                return o1.compareTo(o2);
+            }
 
-            SalesOrder so = new SalesOrder();
-            so.setId(curr.getId());
-            so.setProductEntries(productEntries);
-            so.setCookTime(curr.getCookTime());
-            so.setCustomer(curr.getCustomer());
-            so.setEmployee(curr.getEmployee());
-            so.setSeat(curr.getSeat());
-            so.setType(curr.getType());
-            so.setStatus(curr.getStatus());
-            so.setGratuityPercent(curr.getGratuityPercent());
-            so.setTaxPercent(curr.getTaxPercent());
-            so.setDate(curr.getDate());
-
-            // (!) - Do not print TAKE OUT orders
-            if (printer.contains("!") && curr.hasType(SalesOrderType.TAKEOUT))
-                continue;
-
-            // (@) - Do not print DINE IN orders
-            if (printer.contains("@") && curr.hasType(SalesOrderType.DINEIN))
-                continue;
-
-            // (#) - Print entire order
-            boolean requestsOnly = !printer.contains("#");
-            pd.requestPrint(printer, builder.order(so, requestsOnly, hasPrev));
-
-            printed = true;
-
+        } else {
+            return o1.compareTo(o2);
         }
+    };
 
-        return printed;
+    // ProductEntries are sorted by Rank, MenuItem Weight, then MenuItem Tag
+    private Comparator<ProductEntry> peComparator = (o1, o2) -> {
+        if (getRank(o1) != getRank(o2))
+            return getRank(o1) - getRank(o2);
+        else if (o1.getMenuItem().getWeight() != o2.getMenuItem().getWeight())
+            return o1.getMenuItem().getWeight() - o2.getMenuItem().getWeight();
+        else
+            return tagComparator.compare(o1.getMenuItem().getTag(), o2.getMenuItem().getTag());
+    };
 
-    }
-
-    @Deprecated
-    // PrintJob builder does not re-filter entries by printer.
-    public boolean printOrder1(SalesOrder curr, boolean hasPrev) {
-
-        // Collect all relevant printers
-        Set<String> uniquePrinters = new HashSet<>();
-
-        switch (curr.getStatus()) {
-
-            // Void requests must be sent to all printers.
-            case REQUEST_VOID:
-                for (ProductEntry pe : curr.getProductEntries()) {
-                    long id = pe.getMenuItem().getId();
-                    List<String> printers = miRepo.findOne(id).getPrinters();
-                    uniquePrinters.addAll(printers);
-                }
-                break;
-
-            // Print to relevant printers for all others
-            case OPEN:
-            case REQUEST_OPEN:
-            case REQUEST_CLOSE:
-                for (ProductEntry pe : curr.getProductEntries()) {
-                    if (pe.hasStatus(ProductEntryStatus.REQUEST_SENT)
-                            || pe.hasStatus(ProductEntryStatus.REQUEST_VOID)
-                            || pe.hasStatus(ProductEntryStatus.REQUEST_EDIT)) {
-
-                        // Menu Items need to be reattached to the context to determine printers.
-                        long id = pe.getMenuItem().getId();
-                        List<String> printers = miRepo.findOne(id).getPrinters();
-                        uniquePrinters.addAll(printers);
-                    }
-                }
-                break;
-
-
-            case VOID:
-            case CLOSED:
-            default:
-                // Skip other statuses.
-
-        }
-
-        // No new requests to print
-        if (uniquePrinters.isEmpty())
-            return false;
-
-        // Print to each relevant printer
-        for (String printer : uniquePrinters) {
-
-            // (!) - Do not print TAKE OUT orders
-            if (printer.contains("!") && curr.hasType(SalesOrderType.TAKEOUT))
-                continue;
-
-            // (@) - Do not print DINE IN orders
-            if (printer.contains("@") && curr.hasType(SalesOrderType.DINEIN))
-                continue;
-
-            // (#) - Print entire order
-            boolean requestsOnly = !printer.contains("#");
-            pd.requestPrint(printer, builder.order(curr, requestsOnly, hasPrev));
-        }
-
-        return true;
-    }
 
 }

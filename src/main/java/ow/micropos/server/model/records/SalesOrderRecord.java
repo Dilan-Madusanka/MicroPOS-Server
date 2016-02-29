@@ -66,6 +66,9 @@ public class SalesOrderRecord {
     @JsonView(View.SalesOrderRecord.class)
     Long id;
 
+    @JsonView(View.SalesOrderRecord.class)
+    Long idx;
+
     @JsonView(View.SalesOrderRecordEmployee.class)
     @ManyToOne(fetch = FetchType.LAZY)
     Employee employee;

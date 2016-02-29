@@ -7,18 +7,20 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ow.micropos.server.model.Permission;
 import ow.micropos.server.service.AuthService;
-import ow.micropos.server.service.SettingsService;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.Map;
 
+@Deprecated
 @RestController
 @RequestMapping(value = "/settings")
 public class SettingsController {
 
-    @Autowired AuthService authService;
-    @Autowired SettingsService sService;
+    @Autowired
+    AuthService authService;
 
+    @Deprecated
     @RequestMapping(value = "", method = RequestMethod.GET)
     public Map<String, String> getSettings(
             HttpServletRequest request,
@@ -27,10 +29,11 @@ public class SettingsController {
 
         authService.authorize(request, Permission.CLIENT_SETTINGS);
 
-        return sService.getSettings(keys);
+        return Collections.emptyMap();
 
     }
 
+    @Deprecated
     @RequestMapping(value = "", method = RequestMethod.POST)
     public boolean postSetting(
             HttpServletRequest request,
@@ -40,9 +43,7 @@ public class SettingsController {
 
         authService.authorize(request, Permission.CLIENT_SETTINGS);
 
-        sService.putSetting(key, val);
-
-        return true;
+        return false;
 
     }
 
