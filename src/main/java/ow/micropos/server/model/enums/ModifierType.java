@@ -4,8 +4,6 @@ public enum ModifierType {
 
     ADDITION,
     EXCLUSION,
-    SUBSTITUTION,
-    INSTRUCTION,
-    VARIATION
+    SUBSTITUTION
 
 }

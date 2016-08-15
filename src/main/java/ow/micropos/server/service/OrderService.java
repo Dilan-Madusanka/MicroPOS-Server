@@ -5,10 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ow.micropos.server.ObjectViewMapper;
 import ow.micropos.server.exception.MicroPosException;
 import ow.micropos.server.model.Permission;
-import ow.micropos.server.model.View;
 import ow.micropos.server.model.employee.Employee;
 import ow.micropos.server.model.enums.*;
 import ow.micropos.server.model.menu.Modifier;
@@ -35,7 +33,6 @@ public class OrderService {
 
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
-    @Autowired ObjectViewMapper mapper;
     @Autowired SeatRepository seatRepo;
     @Autowired CustomerRepository customerRepo;
     @Autowired SalesOrderRepository soRepo;
@@ -120,113 +117,95 @@ public class OrderService {
 
     private void _transitionSalesOrder(SalesOrder item) {
 
-        String text = mapper.asString(item, View.SalesOrder.class);
-
         switch (item.getStatus()) {
 
             case REQUEST_OPEN:
-                log.debug("Opening\t" + text);
                 item.setStatus(SalesOrderStatus.OPEN);
                 soRepo.save(item);
                 break;
 
             case REQUEST_CLOSE:
-                log.debug("Closing\t" + text);
                 item.setStatus(SalesOrderStatus.CLOSED);
                 soRepo.save(item);
                 break;
 
             case REQUEST_VOID:
-                log.debug("Voiding\t" + text);
                 item.setStatus(SalesOrderStatus.VOID);
                 soRepo.save(item);
                 break;
 
             default:
-                log.debug("Skipped\t" + text);
+                break;
+
         }
 
     }
 
     private void _transitionProductEntry(ProductEntry item) {
 
-        String text = mapper.asString(item, View.ProductEntry.class);
-
         switch (item.getStatus()) {
 
             case REQUEST_SENT:
-                log.debug("\tSending\t" + text);
                 item.setStatus(ProductEntryStatus.SENT);
                 prodRepo.save(item);
                 break;
 
             case REQUEST_HOLD:
-                log.debug("\tHolding\t" + text);
                 item.setStatus(ProductEntryStatus.HOLD);
                 prodRepo.save(item);
                 break;
 
             case REQUEST_EDIT:
-                log.debug("\tEditing\t" + text);
                 item.setStatus(ProductEntryStatus.SENT);
                 prodRepo.save(item);
                 break;
 
             case REQUEST_VOID:
             case REQUEST_HOLD_VOID:
-                log.debug("\tVoiding\t" + text);
                 item.setStatus(ProductEntryStatus.VOID);
                 prodRepo.save(item);
                 break;
 
             default:
-                log.debug("\tSkipped\t" + text);
+                break;
         }
     }
 
     private void _transitionPaymentEntry(PaymentEntry item) {
 
-        String text = mapper.asString(item, View.PaymentEntry.class);
-
         switch (item.getStatus()) {
 
             case REQUEST_PAID:
-                log.debug("\tPaying\t" + text);
                 item.setStatus(PaymentEntryStatus.PAID);
                 payRepo.save(item);
                 break;
 
             case REQUEST_VOID:
-                log.debug("\tVoiding\t" + text);
                 item.setStatus(PaymentEntryStatus.VOID);
                 payRepo.save(item);
                 break;
 
             default:
-                log.debug("\tSkipped\t" + text);
+                break;
         }
     }
 
     private void _transitionChargeEntry(ChargeEntry item) {
 
-        String text = mapper.asString(item, View.ChargeEntry.class);
-
         switch (item.getStatus()) {
 
             case REQUEST_APPLY:
-                log.debug("\tApplying\t" + text);
                 item.setStatus(ChargeEntryStatus.APPLIED);
                 chargeRepo.save(item);
                 break;
 
             case REQUEST_VOID:
-                log.debug("\tVoiding\t" + text);
                 item.setStatus(ChargeEntryStatus.VOID);
                 chargeRepo.save(item);
                 break;
 
             default:
-                log.debug("\tSkipped\t" + text);
+                break;
         }
 
     }
@@ -345,6 +324,12 @@ public class OrderService {
         } else if (!canChange && _hasChanged(prevPE, currPE)) {
 
             throw new MicroPosException("Product Entry can not be modified");
+
+        } else if (prevPE.hasStatus(ProductEntryStatus.HOLD)
+                && currPE.hasStatus(ProductEntryStatus.REQUEST_HOLD)) {
+
+            // Allow requesting hold on already held items, otherwise client will complain when
+            // using the hold toggle. This should not have any real effect.
 
         } else if (prevPE.hasStatus(ProductEntryStatus.HOLD)
                 && currPE.hasStatus(ProductEntryStatus.REQUEST_SENT)) {

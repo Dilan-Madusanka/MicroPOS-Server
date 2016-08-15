@@ -19,5 +19,11 @@
         <processorPath useClasspath="true" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="client_main" target="1.8" />
+      <module name="client_test" target="1.8" />
+      <module name="MicroPOS_Server_main" target="1.8" />
+      <module name="MicroPOS_Server_test" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

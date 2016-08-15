@@ -3,7 +3,6 @@ package ow.micropos.server.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ow.micropos.server.ObjectViewMapper;
 import ow.micropos.server.model.enums.ProductEntryStatus;
 import ow.micropos.server.model.enums.SalesOrderStatus;
 import ow.micropos.server.model.enums.SalesOrderType;
@@ -24,7 +23,6 @@ import java.util.stream.Collectors;
 @Service
 public class SalesOrderService {
 
-    @Autowired ObjectViewMapper mapper;
     @Autowired SeatRepository seatRepo;
     @Autowired CustomerRepository customerRepo;
     @Autowired SalesOrderRepository soRepo;

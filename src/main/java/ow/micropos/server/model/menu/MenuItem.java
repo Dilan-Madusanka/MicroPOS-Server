@@ -41,6 +41,9 @@ public class MenuItem {
     @JsonView(View.MenuItem.class)
     BigDecimal price;
 
+    @JsonView(View.MenuItem.class)
+    boolean taxed;
+
     @JsonView(View.MenuItemWithCategory.class)
     @ManyToOne(fetch = FetchType.LAZY)
     Category category;

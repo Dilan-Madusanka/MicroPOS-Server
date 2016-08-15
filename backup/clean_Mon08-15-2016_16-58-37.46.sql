@@ -190,7 +190,7 @@ CREATE TABLE `employee` (
 
 LOCK TABLES `employee` WRITE;
 /*!40000 ALTER TABLE `employee` DISABLE KEYS */;
-INSERT INTO `employee` VALUES (1,NULL,'\0',NULL,'Guest','Guest','0000'),(2,NULL,'\0',NULL,'Terry','Tsai','8898'),(3,NULL,'\0',NULL,'Neelaj','Shah','6139');
+INSERT INTO `employee` VALUES (1,NULL,'\0',NULL,'Guest','Guest','0000'),(2,NULL,'\0',NULL,'Terry','Tsai','8858'),(3,NULL,'\0',NULL,'Neelaj','Shah','6139');
 /*!40000 ALTER TABLE `employee` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -615,9 +615,9 @@ CREATE TABLE `sales_order_record` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `idx` bigint(20) DEFAULT NULL,
   `date` datetime(6) DEFAULT NULL,
-  `gratuity_percent` decimal(19,2) DEFAULT NULL,
+  `gratuity_percent` decimal(19,4) DEFAULT NULL,
   `status` int(11) DEFAULT NULL,
-  `tax_percent` decimal(19,2) DEFAULT NULL,
+  `tax_percent` decimal(19,4) DEFAULT NULL,
   `type` int(11) DEFAULT NULL,
   `customer_id` bigint(20) DEFAULT NULL,
   `employee_id` bigint(20) DEFAULT NULL,

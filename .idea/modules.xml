@@ -2,8 +2,12 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/MicroPOS Server.iml" filepath="$PROJECT_DIR$/MicroPOS Server.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../MicroPOS-Client/client.iml" filepath="$PROJECT_DIR$/../MicroPOS-Client/client.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/MicroPOS Server.iml" filepath="$PROJECT_DIR$/.idea/modules/MicroPOS Server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/MicroPOS_Server_main.iml" filepath="$PROJECT_DIR$/.idea/modules/MicroPOS_Server_main.iml" group="MicroPOS Server" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/MicroPOS_Server_test.iml" filepath="$PROJECT_DIR$/.idea/modules/MicroPOS_Server_test.iml" group="MicroPOS Server" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-548254329/client.iml" filepath="$PROJECT_DIR$/.idea/modules/-548254329/client.iml" group="client" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-548254329/client_main.iml" filepath="$PROJECT_DIR$/.idea/modules/-548254329/client_main.iml" group="client" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-548254329/client_test.iml" filepath="$PROJECT_DIR$/.idea/modules/-548254329/client_test.iml" group="client" />
     </modules>
   </component>
 </project>

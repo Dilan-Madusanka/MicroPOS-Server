@@ -43,6 +43,9 @@ public class BackupService {
     @Value("${micropos.backup.enabled}")
     private boolean enabled;
 
+    @Value("${micropos.backup.external}")
+    private String external;
+
     @Scheduled(cron = "${micropos.backup.cron}")
     @Transactional(readOnly = false)
     public void backupDatabaseToFile() {
@@ -50,13 +53,23 @@ public class BackupService {
         if (!enabled)
             return;
 
+        if (folder != null && !folder.isEmpty())
+            executeBackup(folder);
+
+        if (external != null && !external.isEmpty())
+            executeBackup(external);
+
+    }
+
+    private void executeBackup(String directory) {
+
         try {
 
             Date date = new Date();
 
             Runtime rt = Runtime.getRuntime();
 
-            String file = folder + prefix + backupDateFormat.format(date) + "_" + date.getTime() + ".sql";
+            String file = directory + prefix + backupDateFormat.format(date) + "_" + date.getTime() + ".sql";
 
             Process pr = rt.exec(String.format(command, username, password, database, file));
 
@@ -64,7 +77,7 @@ public class BackupService {
 
             if (processComplete == 0) {
                 log.info("Backup Success - " + file);
-                tryClearLRU(folder);
+                tryClearLRU(directory);
             } else {
                 log.warn("Backup Failed - " + processComplete);
             }
@@ -74,6 +87,7 @@ public class BackupService {
             log.warn("Backup Failed - " + e.getMessage());
 
         }
+
     }
 
     private void tryClearLRU(String folderPath) {

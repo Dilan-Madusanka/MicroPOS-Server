@@ -1,6 +1,6 @@
 package ow.micropos.server.service;
 
-import email.com.gmail.ttsai0509.utils.DateUtils;
+import ow.micropos.server.common.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("Duplicates")
 @Service
 public class ReportService {
 
@@ -120,6 +121,7 @@ public class ReportService {
             BigDecimal daySales = ZERO_DOLLARS;
             BigDecimal dayTax = ZERO_DOLLARS;
 
+            /*
             for (SalesOrderRecord so : daySOR) {
                 BigDecimal soProductTotal = salesOrderRecordProductEntryRecordTotal(so).max(ZERO_DOLLARS);
                 BigDecimal soChargeTotal = salesOrderRecordChargeTotal(so, soProductTotal);
@@ -132,6 +134,7 @@ public class ReportService {
                 daySales = daySales.add(soNetSales).max(ZERO_DOLLARS);
                 dayTax = dayTax.add(soTaxTotal).max(ZERO_DOLLARS);
             }
+            */
 
             report.dailySales.add(daySales);
             report.dailyTax.add(dayTax);
@@ -157,114 +160,111 @@ public class ReportService {
 
         for (SalesOrder so : sos) {
 
-            report.productCount += so.getProductEntries()
-                    .stream()
-                    .filter(per -> !per.hasStatus(ProductEntryStatus.VOID)
-                            && !per.hasStatus(ProductEntryStatus.REQUEST_VOID)
-                            && !per.hasStatus(ProductEntryStatus.REQUEST_HOLD_VOID))
-                    .count();
+            if (so.hasType(SalesOrderType.DINEIN))
+                report.dineInCount++;
+            else
+                report.takeOutCount++;
 
-            report.chargeCount += so.getChargeEntries()
-                    .stream()
-                    .filter(cer -> !cer.hasStatus(ChargeEntryStatus.VOID)
-                            && !cer.hasStatus(ChargeEntryStatus.REQUEST_VOID))
-                    .count();
+            // Main Stuff
 
-            report.paymentCount += so.getPaymentEntries()
-                    .stream()
-                    .filter(per -> !per.hasStatus(PaymentEntryStatus.VOID)
-                            && !per.hasStatus(PaymentEntryStatus.REQUEST_VOID))
-                    .count();
+            BigDecimal soTaxedSalesTotal = ZERO_DOLLARS;
+            BigDecimal soUntaxedSalesTotal = ZERO_DOLLARS;
+            for (ProductEntry pe : so.getProductEntries()) {
+                if (pe.hasStatus(ProductEntryStatus.VOID)
+                        || pe.hasStatus(ProductEntryStatus.REQUEST_VOID)
+                        || pe.hasStatus(ProductEntryStatus.REQUEST_HOLD_VOID))
+                    continue;
 
+                BigDecimal peTotal = productEntryTotal(pe);
+
+                if (pe.getMenuItem().isTaxed()) {
+                    soTaxedSalesTotal = soTaxedSalesTotal
+                            .add(peTotal)
+                            .setScale(2, BigDecimal.ROUND_HALF_UP);
+                } else {
+                    soUntaxedSalesTotal = soUntaxedSalesTotal
+                            .add(peTotal)
+                            .setScale(2, BigDecimal.ROUND_HALF_UP);
+                }
+
+                // Feels Dirty >>> Calculate Category Totals
+                String peCategory = pe.getMenuItem().getCategory().getName();
+                BigDecimal categoryTotal = report.categorySalesTotals.get(peCategory);
+                if (categoryTotal == null)
+                    report.categorySalesTotals.put(peCategory, peTotal);
+                else
+                    report.categorySalesTotals.put(peCategory, peTotal.add(categoryTotal).setScale(2, BigDecimal.ROUND_HALF_UP));
+                // Feels Dirty <<< Calculate Category Totals
+
+            }
+
+            BigDecimal soChargeTotal = ZERO_DOLLARS;
+            for (ChargeEntry ce : so.getChargeEntries()) {
+                if (ce.hasStatus(ChargeEntryStatus.VOID) || ce.hasStatus(ChargeEntryStatus.REQUEST_VOID))
+                    continue;
+
+                if (ce.hasType(ChargeType.FIXED_AMOUNT)) {
+                    soChargeTotal = soChargeTotal
+                            .add(ce.getCharge().getAmount())
+                            .setScale(2, BigDecimal.ROUND_HALF_UP);
+                } else if (ce.hasType(ChargeType.PERCENTAGE)) {
+                    soChargeTotal = soChargeTotal
+                            .add(ce.getCharge().getAmount().multiply(soTaxedSalesTotal))
+                            .setScale(2, BigDecimal.ROUND_HALF_UP);
+                }
+            }
+
+            BigDecimal soSubtotal = soTaxedSalesTotal.add(soChargeTotal).max(ZERO_DOLLARS);
+            BigDecimal soTaxTotal = soSubtotal.multiply(so.getTaxPercent()).setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal soTotal = soSubtotal.add(soTaxTotal).add(soUntaxedSalesTotal);
+
+            BigDecimal effectiveChargeTotal;
+            if (soTaxedSalesTotal.add(soChargeTotal).compareTo(BigDecimal.ZERO) < 0) {
+                effectiveChargeTotal = soTaxedSalesTotal;
+            } else {
+                effectiveChargeTotal = soChargeTotal;
+            }
+
+            report.salesTotal = report.salesTotal.add(soTaxedSalesTotal).add(soUntaxedSalesTotal);
+            report.taxedSalesTotal = report.taxedSalesTotal.add(soTaxedSalesTotal);
+            report.untaxedSalesTotal = report.untaxedSalesTotal.add(soUntaxedSalesTotal);
+            report.taxTotal = report.taxTotal.add(soTaxTotal);
+            report.chargeTotal = report.chargeTotal.add(effectiveChargeTotal);
+            report.total = report.total.add(soTotal);
+
+
+            BigDecimal paymentLeft = soTotal;
             for (PaymentEntry pe : so.getPaymentEntries()) {
                 if (pe.hasStatus(PaymentEntryStatus.VOID) || pe.hasStatus(PaymentEntryStatus.REQUEST_VOID))
                     continue;
 
+                if (paymentLeft.compareTo(ZERO_DOLLARS) <= 0)
+                    break;
+
+                BigDecimal appliedPayment = paymentLeft.min(pe.getAmount().setScale(2, BigDecimal.ROUND_HALF_UP));
+                paymentLeft = paymentLeft.subtract(appliedPayment);
+
+                report.paymentTotal = report.paymentTotal.add(appliedPayment);
+
                 switch (pe.getType()) {
                     case CASH:
-                        report.cashCount++;
-                        report.cashTotal = report.cashTotal.add(pe.getAmount());
+                        report.cashTotal = report.cashTotal.add(appliedPayment);
                         break;
                     case CREDIT:
-                        report.creditCount++;
-                        report.creditTotal = report.creditTotal.add(pe.getAmount());
+                        report.creditTotal = report.creditTotal.add(appliedPayment);
                         break;
                     case CHECK:
-                        report.checkCount++;
-                        report.checkTotal = report.checkTotal.add(pe.getAmount());
+                        report.checkTotal = report.checkTotal.add(appliedPayment);
                         break;
                     case GIFTCARD:
-                        report.giftcardCount++;
-                        report.giftcardTotal = report.giftcardTotal.add(pe.getAmount());
+                        report.giftcardTotal = report.giftcardTotal.add(appliedPayment);
                         break;
                 }
             }
 
-            report.gratuityCount += so.hasGratuity() ? 1 : 0;
-
-            BigDecimal soProductTotal = salesOrderProductEntryTotal(so).max(ZERO_DOLLARS);
-            report.productTotal = report.productTotal.add(soProductTotal);
-
-            BigDecimal soChargeTotal = salesOrderChargeTotal(so, soProductTotal);
-            report.chargeTotal = report.chargeTotal.add(soChargeTotal);
-
-            BigDecimal soSubTotal = soProductTotal.add(soChargeTotal).max(ZERO_DOLLARS);
-            report.subTotal = report.subTotal.add(soSubTotal);
-
-            BigDecimal soTaxTotal = salesOrderTaxTotal(so, soSubTotal).max(ZERO_DOLLARS);
-            report.taxTotal = report.taxTotal.add(soTaxTotal);
-
-            BigDecimal soGratuityTotal = salesOrderGratuityTotal(so, soSubTotal).max(ZERO_DOLLARS);
-            report.gratuityTotal = report.gratuityTotal.add(soGratuityTotal);
-
-            BigDecimal soGrandTotal = soSubTotal.add(soTaxTotal).add(soGratuityTotal).max(ZERO_DOLLARS);
-            report.grandTotal = report.grandTotal.add(soGrandTotal);
-
-            BigDecimal soPaymentTotal = salesOrderPaymentTotal(so).max(ZERO_DOLLARS);
-            report.paymentTotal = report.paymentTotal.add(soPaymentTotal);
         }
 
         return report;
-    }
-
-    private BigDecimal salesOrderPaymentTotal(SalesOrder so) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (PaymentEntry pe : so.getPaymentEntries()) {
-            if (!pe.hasStatus(PaymentEntryStatus.VOID)
-                    && !pe.hasStatus(PaymentEntryStatus.REQUEST_VOID))
-                total = total.add(pe.getAmount());
-        }
-        return total.setScale(2, BigDecimal.ROUND_HALF_UP);
-    }
-
-    private BigDecimal salesOrderGratuityTotal(SalesOrder so, BigDecimal soSubTotal) {
-        return so.getGratuityPercent().multiply(soSubTotal).setScale(2, BigDecimal.ROUND_HALF_UP);
-    }
-
-    private BigDecimal salesOrderTaxTotal(SalesOrder so, BigDecimal soSubTotal) {
-        return so.getTaxPercent().multiply(soSubTotal).setScale(2, BigDecimal.ROUND_HALF_UP);
-    }
-
-    private BigDecimal salesOrderChargeTotal(SalesOrder so, BigDecimal soProductTotal) {
-        BigDecimal charge = BigDecimal.ZERO;
-        for (ChargeEntry ce : so.getChargeEntries())
-            if (ce.hasStatus(ChargeEntryStatus.VOID))
-                ;// Do nothing
-            else if (ce.hasStatus(ChargeEntryStatus.REQUEST_VOID))
-                ;// Do nothing
-            else if (ce.hasType(ChargeType.FIXED_AMOUNT))
-                charge = charge.add(ce.getCharge().getAmount());
-            else if (ce.hasType(ChargeType.PERCENTAGE))
-                charge = charge.add(ce.getCharge().getAmount().multiply(soProductTotal).setScale(2, BigDecimal
-                        .ROUND_HALF_UP));
-        return charge.setScale(2, BigDecimal.ROUND_HALF_UP);
-    }
-
-    private BigDecimal salesOrderProductEntryTotal(SalesOrder so) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (ProductEntry pe : so.getProductEntries())
-            total = total.add(productEntryTotal(pe));
-        return total.setScale(2, BigDecimal.ROUND_HALF_UP);
     }
 
     private BigDecimal productEntryTotal(ProductEntry pe) {
@@ -291,114 +291,111 @@ public class ReportService {
 
         for (SalesOrderRecord so : sos) {
 
-            report.productCount += so.getProductEntryRecords()
-                    .stream()
-                    .filter(per -> !per.hasStatus(ProductEntryStatus.VOID)
-                            && !per.hasStatus(ProductEntryStatus.REQUEST_VOID)
-                            && !per.hasStatus(ProductEntryStatus.REQUEST_HOLD_VOID))
-                    .count();
+            if (so.hasType(SalesOrderType.DINEIN))
+                report.dineInCount++;
+            else
+                report.takeOutCount++;
 
-            report.chargeCount += so.getChargeEntryRecords()
-                    .stream()
-                    .filter(cer -> !cer.hasStatus(ChargeEntryStatus.VOID)
-                            && !cer.hasStatus(ChargeEntryStatus.REQUEST_VOID))
-                    .count();
+            // Main Stuff
 
-            report.paymentCount += so.getPaymentEntryRecords()
-                    .stream()
-                    .filter(per -> !per.hasStatus(PaymentEntryStatus.VOID)
-                            && !per.hasStatus(PaymentEntryStatus.REQUEST_VOID))
-                    .count();
+            BigDecimal soTaxedSalesTotal = ZERO_DOLLARS;
+            BigDecimal soUntaxedSalesTotal = ZERO_DOLLARS;
+            for (ProductEntryRecord pe : so.getProductEntryRecords()) {
+                if (pe.hasStatus(ProductEntryStatus.VOID)
+                        || pe.hasStatus(ProductEntryStatus.REQUEST_VOID)
+                        || pe.hasStatus(ProductEntryStatus.REQUEST_HOLD_VOID))
+                    continue;
 
+                BigDecimal peTotal = productEntryRecordTotal(pe);
+
+                if (pe.getMenuItem().isTaxed()) {
+                    soTaxedSalesTotal = soTaxedSalesTotal
+                            .add(peTotal)
+                            .setScale(2, BigDecimal.ROUND_HALF_UP);
+                } else {
+                    soUntaxedSalesTotal = soUntaxedSalesTotal
+                            .add(peTotal)
+                            .setScale(2, BigDecimal.ROUND_HALF_UP);
+                }
+
+                // Feels Dirty >>> Calculate Category Totals
+                String peCategory = pe.getMenuItem().getCategory().getName();
+                BigDecimal categoryTotal = report.categorySalesTotals.get(peCategory);
+                if (categoryTotal == null)
+                    report.categorySalesTotals.put(peCategory, peTotal);
+                else
+                    report.categorySalesTotals.put(peCategory, peTotal.add(categoryTotal).setScale(2, BigDecimal.ROUND_HALF_UP));
+                // Feels Dirty <<< Calculate Category Totals
+
+            }
+
+            BigDecimal soChargeTotal = ZERO_DOLLARS;
+            for (ChargeEntryRecord ce : so.getChargeEntryRecords()) {
+                if (ce.hasStatus(ChargeEntryStatus.VOID) || ce.hasStatus(ChargeEntryStatus.REQUEST_VOID))
+                    continue;
+
+                if (ce.hasType(ChargeType.FIXED_AMOUNT)) {
+                    soChargeTotal = soChargeTotal
+                            .add(ce.getCharge().getAmount())
+                            .setScale(2, BigDecimal.ROUND_HALF_UP);
+                } else if (ce.hasType(ChargeType.PERCENTAGE)) {
+                    soChargeTotal = soChargeTotal
+                            .add(ce.getCharge().getAmount().multiply(soTaxedSalesTotal))
+                            .setScale(2, BigDecimal.ROUND_HALF_UP);
+                }
+            }
+
+            BigDecimal soSubtotal = soTaxedSalesTotal.add(soChargeTotal).max(ZERO_DOLLARS);
+            BigDecimal soTaxTotal = soSubtotal.multiply(so.getTaxPercent()).setScale(2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal soTotal = soSubtotal.add(soTaxTotal).add(soUntaxedSalesTotal);
+
+            BigDecimal effectiveChargeTotal;
+            if (soTaxedSalesTotal.add(soChargeTotal).compareTo(BigDecimal.ZERO) < 0) {
+                effectiveChargeTotal = soTaxedSalesTotal;
+            } else {
+                effectiveChargeTotal = soChargeTotal;
+            }
+
+            report.salesTotal = report.salesTotal.add(soTaxedSalesTotal).add(soUntaxedSalesTotal);
+            report.taxedSalesTotal = report.taxedSalesTotal.add(soTaxedSalesTotal);
+            report.untaxedSalesTotal = report.untaxedSalesTotal.add(soUntaxedSalesTotal);
+            report.taxTotal = report.taxTotal.add(soTaxTotal);
+            report.chargeTotal = report.chargeTotal.add(effectiveChargeTotal);
+            report.total = report.total.add(soTotal);
+
+
+            BigDecimal paymentLeft = soTotal;
             for (PaymentEntryRecord pe : so.getPaymentEntryRecords()) {
                 if (pe.hasStatus(PaymentEntryStatus.VOID) || pe.hasStatus(PaymentEntryStatus.REQUEST_VOID))
                     continue;
 
+                if (paymentLeft.compareTo(ZERO_DOLLARS) <= 0)
+                    break;
+
+                BigDecimal appliedPayment = paymentLeft.min(pe.getAmount().setScale(2, BigDecimal.ROUND_HALF_UP));
+                paymentLeft = paymentLeft.subtract(appliedPayment);
+
+                report.paymentTotal = report.paymentTotal.add(appliedPayment);
+
                 switch (pe.getType()) {
                     case CASH:
-                        report.cashCount++;
-                        report.cashTotal = report.cashTotal.add(pe.getAmount());
+                        report.cashTotal = report.cashTotal.add(appliedPayment);
                         break;
                     case CREDIT:
-                        report.creditCount++;
-                        report.creditTotal = report.creditTotal.add(pe.getAmount());
+                        report.creditTotal = report.creditTotal.add(appliedPayment);
                         break;
                     case CHECK:
-                        report.checkCount++;
-                        report.checkTotal = report.checkTotal.add(pe.getAmount());
+                        report.checkTotal = report.checkTotal.add(appliedPayment);
                         break;
                     case GIFTCARD:
-                        report.giftcardCount++;
-                        report.giftcardTotal = report.giftcardTotal.add(pe.getAmount());
+                        report.giftcardTotal = report.giftcardTotal.add(appliedPayment);
                         break;
                 }
             }
 
-            report.gratuityCount += so.hasGratuity() ? 1 : 0;
-
-            BigDecimal soProductTotal = salesOrderRecordProductEntryRecordTotal(so).max(ZERO_DOLLARS);
-            report.productTotal = report.productTotal.add(soProductTotal);
-
-            BigDecimal soChargeTotal = salesOrderRecordChargeTotal(so, soProductTotal);
-            report.chargeTotal = report.chargeTotal.add(soChargeTotal);
-
-            BigDecimal soSubTotal = soProductTotal.add(soChargeTotal).max(ZERO_DOLLARS);
-            report.subTotal = report.subTotal.add(soSubTotal);
-
-            BigDecimal soTaxTotal = salesOrderRecordTaxTotal(so, soSubTotal).max(ZERO_DOLLARS);
-            report.taxTotal = report.taxTotal.add(soTaxTotal);
-
-            BigDecimal soGratuityTotal = salesOrderRecordGratuityTotal(so, soSubTotal).max(ZERO_DOLLARS);
-            report.gratuityTotal = report.gratuityTotal.add(soGratuityTotal);
-
-            BigDecimal soGrandTotal = soSubTotal.add(soTaxTotal).add(soGratuityTotal).max(ZERO_DOLLARS);
-            report.grandTotal = report.grandTotal.add(soGrandTotal);
-
-            BigDecimal soPaymentTotal = salesOrderRecordPaymentTotal(so).max(ZERO_DOLLARS);
-            report.paymentTotal = report.paymentTotal.add(soPaymentTotal);
         }
 
         return report;
-    }
-
-    private BigDecimal salesOrderRecordPaymentTotal(SalesOrderRecord so) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (PaymentEntryRecord pe : so.getPaymentEntryRecords()) {
-            if (!pe.hasStatus(PaymentEntryStatus.VOID)
-                    || !pe.hasStatus(PaymentEntryStatus.REQUEST_VOID))
-                total = total.add(pe.getAmount());
-        }
-        return total.setScale(2, BigDecimal.ROUND_HALF_UP);
-    }
-
-    private BigDecimal salesOrderRecordGratuityTotal(SalesOrderRecord so, BigDecimal soSubTotal) {
-        return so.getGratuityPercent().multiply(soSubTotal).setScale(2, BigDecimal.ROUND_HALF_UP);
-    }
-
-    private BigDecimal salesOrderRecordTaxTotal(SalesOrderRecord so, BigDecimal soSubTotal) {
-        return so.getTaxPercent().multiply(soSubTotal).setScale(2, BigDecimal.ROUND_HALF_UP);
-    }
-
-    private BigDecimal salesOrderRecordChargeTotal(SalesOrderRecord so, BigDecimal soProductTotal) {
-        BigDecimal charge = BigDecimal.ZERO;
-        for (ChargeEntryRecord ce : so.getChargeEntryRecords())
-            if (ce.hasStatus(ChargeEntryStatus.VOID))
-                ;// Do nothing
-            else if (ce.hasStatus(ChargeEntryStatus.REQUEST_VOID))
-                ;// Do nothing
-            else if (ce.hasType(ChargeType.FIXED_AMOUNT))
-                charge = charge.add(ce.getCharge().getAmount());
-            else if (ce.hasType(ChargeType.PERCENTAGE))
-                charge = charge.add(ce.getCharge().getAmount().multiply(soProductTotal).setScale(2, BigDecimal
-                        .ROUND_HALF_UP));
-        return charge.setScale(2, BigDecimal.ROUND_HALF_UP);
-    }
-
-    private BigDecimal salesOrderRecordProductEntryRecordTotal(SalesOrderRecord so) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (ProductEntryRecord pe : so.getProductEntryRecords())
-            total = total.add(productEntryRecordTotal(pe));
-        return total.setScale(2, BigDecimal.ROUND_HALF_UP);
     }
 
     private BigDecimal productEntryRecordTotal(ProductEntryRecord pe) {

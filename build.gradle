@@ -36,7 +36,9 @@ repositories {
 // Project Dependencies
 dependencies {
     compile files('libs/rxtx-2.2/RXTXcomm.jar')
-    compile files('libs/EscPos-0.1.jar')
+    //compile files('libs/EscPos-0.1.jar')
+    compile files('libs/EscPos-1.1.jar')
+
     compile 'org.springframework.boot:spring-boot-starter-web'
     compile 'org.springframework.boot:spring-boot-starter-data-jpa'
     compile 'org.springframework.boot:spring-boot-starter-data-rest'
@@ -47,8 +49,6 @@ dependencies {
     compile 'com.google.code.gson:gson:2.3.1'
     compile 'org.projectlombok:lombok:1.16.4'
     compile 'mysql:mysql-connector-java:5.1.38'
-    //compile 'org.postgresql:postgresql:9.4.1207.jre7'
-    //compile 'com.h2database:h2:1.4.187'
 
 }
 
@@ -58,18 +58,22 @@ task wrapper(type: Wrapper) {
 }
 
 // Deployment Task
-task cleanDeployFiles(type: Delete) {
+task microposServerCleanDeployFiles(type: Delete) {
     delete 'deploy'
 }
 
-task makeDeployFiles(dependsOn: ['assemble', ':client:fatJar']) << {
+//noinspection GroovyAssignabilityCheck
+task microposServerMakeDeployFiles(dependsOn: ['assemble', ':client:microposClientFatJar']) << {
+
+    // Main Startup Scripts
     copy {
         from 'server-start.bat'
         from 'server-restore.bat'
         from 'server-backup.bat'
         into 'deploy'
-
     }
+
+    // MicroPOS Application
     copy {
         from 'build/libs/micropos-server-1.0.jar'
         from 'application.yml'
@@ -79,14 +83,20 @@ task makeDeployFiles(dependsOn: ['assemble', ':client:fatJar']) << {
         from 'mysqldump.exe'
         into 'deploy/micropos'
     }
+
+    // Database Backups
     copy {
         from 'backup'
         into 'deploy/micropos/backup'
     }
+
+    // Timecard Files (Not Fully Implemented Yet)
     copy {
         from 'timecard'
         into 'deploy/micropos/timecard'
     }
+
+    // Web Server Public Files
     copy {
         from project(':client').file('build/libs/micropos-client-1.0.jar')
         from 'public'
@@ -94,7 +104,8 @@ task makeDeployFiles(dependsOn: ['assemble', ':client:fatJar']) << {
     }
 }
 
-task deployableZip(type: Zip, dependsOn: ['cleanDeployFiles', 'makeDeployFiles']) {
+// Package Project For Transfer
+task microposServerDeployableZip(type: Zip, dependsOn: ['microposServerCleanDeployFiles', 'microposServerMakeDeployFiles']) {
     from 'deploy'
     baseName = 'MicroPOS-Deployable'
 }

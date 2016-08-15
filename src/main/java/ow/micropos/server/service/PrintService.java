@@ -5,8 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ow.micropos.server.ObjectViewMapper;
-import ow.micropos.server.custom.WokPrintJobBuilder;
+import ow.micropos.server.common.PrintJobBuilder;
 import ow.micropos.server.model.enums.ProductEntryStatus;
 import ow.micropos.server.model.enums.SalesOrderStatus;
 import ow.micropos.server.model.enums.SalesOrderType;
@@ -25,10 +24,9 @@ public class PrintService {
     private static final Logger log = LoggerFactory.getLogger(PrintService.class);
     private static final Pattern tagPattern = Pattern.compile("([^\\d]*)(\\d+)");
 
-    @Autowired ObjectViewMapper mapper;
     @Autowired MenuItemRepository miRepo;
     @Autowired PrinterDispatcher pd;
-    @Autowired WokPrintJobBuilder builder;
+    @Autowired PrintJobBuilder builder;
 
     public List<String> getPrinters() {
         return new ArrayList<>(pd.getPrinters().keySet());

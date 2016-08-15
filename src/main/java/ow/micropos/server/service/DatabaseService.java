@@ -29,6 +29,7 @@ import ow.micropos.server.repository.target.SectionRepository;
 import java.util.Date;
 import java.util.List;
 
+@SuppressWarnings({"Duplicates", "DefaultAnnotationParam"})
 @Service
 public class DatabaseService {
 
@@ -261,7 +262,6 @@ public class DatabaseService {
         }
     }
 
-
     /******************************************************************
      *                                                                *
      * Menu Item Management
@@ -285,25 +285,28 @@ public class DatabaseService {
 
             MenuItem oldMenuItem = miRepo.findOne(menuItem.getId());
 
-            // Referenced menu items prices can not be updated in place.
-            if (oldMenuItem.getProductEntries() != null
-                    && !oldMenuItem.getProductEntries().isEmpty()
-                    && oldMenuItem.getPrice().compareTo(menuItem.getPrice()) != 0) {
-                oldMenuItem.setArchived(true);
-                oldMenuItem.setArchiveDate(new Date());
-                miRepo.save(oldMenuItem);
-                menuItem.setId(null);
+            // Unreferenced menu items can be updated in place.
+            if ((oldMenuItem.getProductEntryRecords() == null || oldMenuItem.getProductEntryRecords().isEmpty())
+                    && (oldMenuItem.getProductEntries() == null || oldMenuItem.getProductEntries().isEmpty())) {
                 miRepo.save(menuItem);
-            } else if (oldMenuItem.getProductEntryRecords() != null
-                    && !oldMenuItem.getProductEntryRecords().isEmpty()
-                    && oldMenuItem.getPrice().compareTo(menuItem.getPrice()) != 0) {
+
+            // Referenced menu items with price change can NOT be updated in place.
+            } else if (oldMenuItem.getPrice().compareTo(menuItem.getPrice()) != 0) {
                 oldMenuItem.setArchived(true);
                 oldMenuItem.setArchiveDate(new Date());
                 miRepo.save(oldMenuItem);
                 menuItem.setId(null);
                 miRepo.save(menuItem);
 
-                // Unreferenced menu items can be updated in place
+            // Referenced menu items with taxed flag change can NOT be updated in place.
+            } else if (oldMenuItem.isTaxed() != menuItem.isTaxed()) {
+                oldMenuItem.setArchived(true);
+                oldMenuItem.setArchiveDate(new Date());
+                miRepo.save(oldMenuItem);
+                menuItem.setId(null);
+                miRepo.save(menuItem);
+
+            // Referenced menu items with any other changes can be updated in place.
             } else {
                 miRepo.save(menuItem);
             }
@@ -631,7 +634,6 @@ public class DatabaseService {
 
         }
     }
-
 
     /******************************************************************
      *                                                                *

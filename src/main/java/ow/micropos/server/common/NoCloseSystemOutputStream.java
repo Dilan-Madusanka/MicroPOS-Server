@@ -1,7 +1,13 @@
 package ow.micropos.server.common;
 
-/**
- * Created by Terry on 8/7/2016.
- */
-public class NoCloseSystemOutputStream {
+import java.io.IOException;
+import java.io.OutputStream;
+
+public class NoCloseSystemOutputStream extends OutputStream {
+
+    @Override
+    public void write(int b) throws IOException {
+        System.out.write(b);
+    }
+
 }

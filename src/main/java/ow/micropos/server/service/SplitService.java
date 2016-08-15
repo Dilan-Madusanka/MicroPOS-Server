@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ow.micropos.server.ObjectViewMapper;
 import ow.micropos.server.exception.MicroPosException;
 import ow.micropos.server.model.employee.Employee;
 import ow.micropos.server.model.enums.SalesOrderStatus;
@@ -29,7 +28,6 @@ public class SplitService {
 
     private static final Logger log = LoggerFactory.getLogger(SplitService.class);
 
-    @Autowired ObjectViewMapper mapper;
     @Autowired SalesOrderRepository soRepo;
     @Autowired PaymentEntryRepository payRepo;
     @Autowired ProductEntryRepository prodRepo;
